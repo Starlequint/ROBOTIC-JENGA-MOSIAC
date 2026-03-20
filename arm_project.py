@@ -5,7 +5,7 @@ class Position:
     def __init__(self, x, y, z):
         self.x, self.y, self.z = x, y, z
     def display(self):
-        return f"({round(self.x,3)},{round(self.y,3)},{round(self.z,3)})"
+        return f"({round(self.x,3)},{round(self.y,3)},{round(self.z,3)})m"
     def __eq__(self, other):
         if isinstance(other, Position):
             return self.x == other.x and self.y == other.y and self.z == other.z
@@ -14,33 +14,51 @@ class Position:
         if isinstance(other, Position):
             return self.x == other.x and self.y == other.y
         return False
-    def distance2d(self, other):
-        if isinstance(other, Position):
-            return sqrt((self.x-other.x)**2+(self.y-other.y)**2)
-        else:
-            print("Position::distance2d() misused")
-            exit(1)
     def distance(self, other):
         if isinstance(other, Position):
             return sqrt((self.x-other.x)**2+(self.y-other.y)**2+(self.z-other.z)**2)
         else:
             print("Position::distance() misused")
             exit(1)
+    def distance2d(self, other):
+        if isinstance(other, Position):
+            return sqrt((self.x-other.x)**2+(self.y-other.y)**2)
+        else:
+            print("Position::distance2d() misused")
+            exit(1)
+
+class Orientation:
+    def __init__(self, x, y, z):
+        self.x, self.y, self.z = x, y, z
+    def display(self):
+        return f"({round(self.x,3)},{round(self.y,3)},{round(self.z,3)})rad"
+    def __eq__(self, other):
+        if isinstance(other, Orientation):
+            return self.x == other.x and self.y == other.y and self.z == other.z
+        return False
+    def distance(self, other):
+        if isinstance(other, Orientation):
+            return sqrt((self.x-other.x)**2+(self.y-other.y)**2+(self.z-other.z)**2)
+        else:
+            print("Orientation::distance() misused")
+            exit(1)
 
 class Brick:
     def __init__(self, start, end, width=0, latitudinalAngle=0, 
                  longitudinalAngle=0, thickness=0):
+        """orientation: y is along the brick, z on the big side, x is on the small side"""
         self.start, self.end, self.width, self.thickness = start, end, width, thickness
-        self.thetaX, self.thetaY = latitudinalAngle, longitudinalAngle
         if (not(start.eq2d(end))):
-            self.thetaZ = atan2(end.y-start.y, end.x-start.x)
+            thetaZ = atan2(end.y-start.y, end.x-start.x)
             if (self.thetaX != pi/2 and self.thetaX != -pi/2):
                 self.length = sqrt((end.y-start.y)**2+(end.x-start.x)**2
                                    )/cos(self.thetaX)
             else:
                 self.verticalBick()
         else:
+            thetaZ = 0
             self.verticalBick()
+        self.orientation = Orientation(latitudinalAngle, longitudinalAngle, thetaZ)
         self.center = Position((start.x+end.x)/2,(start.y+end.y)/2,(start.z+end.z)/2)
     def verticalBick(self):
         self.length = 0
@@ -48,14 +66,20 @@ class Brick:
 
             
 class Move:
-    def __init__(self, positions):
+    def __init__(self, positions, orientations):
         self.positions = positions
+        self.orientations = orientations
         if len(positions) < 2: 
             print("Error: this move lack of positions")
             exit(1)
-        else: self.start, self.end = positions[0], positions[-1]
+        elif len(positions) != len(orientations):
+            print("Error: A move must have the same # of orientation and positions")
+            exit(1)
+        self.start, self.end = positions[0], positions[-1]
+        self.thetaZ0, self.thetaZEnd = orientations[0], orientations[-1]
     def display(self):
-        return ("from "+self.start.display()+" to "+self.end.display()+
+        return ("from "+self.start.display()+' '+self.thetaZ0.display()+" to "+
+                self.end.display()+' '+self.self.thetaZEnd.display()+
                 f" in {len(self.positions)} steps")
 
 #Constants
@@ -77,9 +101,12 @@ def recognizePattern(bricks):
 
 def catch(position, brick):
     # task 4
-    move(position)
+    move(position, Orientation(0, 0, brick.orientation.z))
 
-def move(position):
+def move(position, orientation=None):
+    if orientation==None:
+        #keep current orientation
+        pass
     # task 5
     pass
 
@@ -104,7 +131,7 @@ def findMisplaced(position, bricks):
             minDistance = distance
     return bricks[iMin]
 
-def pushBrick(currentPos, expectedPos):
+def pushBrick(brick, expectedMove):
     # task 5
     pass
 
@@ -120,16 +147,16 @@ def main():
     for i in range(len(moves)):
         print(f"Move {i} starts : "+moves[i].display())
         if i==0: print("Task 4: New brick picking")
-        catch(moves[i].start, movedBricks[i])
+        catch(moves[i].start, moves[i].thetaZ0)
         for j in range(1, len(moves[i].positions)):
-            move(moves[i].positions[j])
+            move(moves[i].positions[j], moves[i].orientations[j])
         release()
         if i==0: print("Task 3: Feedback mapping")
         currentBricks = brickDetection()
         if not(brickPlaced(moves[i].start, currentBricks)):
             print("Brick misplaced : push attempt coming")
             misplacedBrick = findMisplaced(moves[i].start, currentBricks)
-            pushBrick(misplacedBrick.center, moves[i].position)
+            pushBrick(misplacedBrick, moves[i])
     print("Tasks completed !")
 
 if __name__ == '__main__':
