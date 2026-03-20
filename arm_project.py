@@ -5,7 +5,7 @@ class Position:
     def __init__(self, x, y, z):
         self.x, self.y, self.z = x, y, z
     def display(self):
-        return f"({round(self.x,3)},{round(self.y,3)},{round(self.z,3)})m"
+        return f"({round(self.x,3)},{round(self.y,3)},{round(self.z,3)})mm"
     def __eq__(self, other):
         if isinstance(other, Position):
             return self.x == other.x and self.y == other.y and self.z == other.z
@@ -26,6 +26,8 @@ class Position:
         else:
             print("Position::distance2d() misused")
             exit(1)
+    def norm(self):
+        return sqrt(self.x**2+self.y**2+self.z**2)
 
 class Orientation:
     def __init__(self, x, y, z):
@@ -103,7 +105,17 @@ def catch(position, brick):
     # task 4
     move(position, Orientation(0, 0, brick.orientation.z))
 
+def inBoundaries(position):
+    """ Boundaries: Table, Joint limits, computer """
+    #TODO: complete with the computer limit
+    if (position.z < 0 or position.norm() < 420.8 or 902.0 < position.norm()):
+        return False
+    else: return True
+
 def move(position, orientation=None):
+    if not(inBoundaries(position)):
+        print("Attempt to exceed the robot limits: "+position)
+        exit(1)
     if orientation==None:
         #keep current orientation
         pass
