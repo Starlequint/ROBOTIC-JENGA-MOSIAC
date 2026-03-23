@@ -1,5 +1,6 @@
-from math import atan2, sqrt, cos, pi
+from math import atan2, sqrt, cos, sin, pi
 from sys import exit
+from JENGA_detection import detect_planks
 
 class Position:
     def __init__(self, x, y, z):
@@ -46,22 +47,30 @@ class Orientation:
             exit(1)
 
 class Brick:
-    def __init__(self, start, end, width=0, latitudinalAngle=0, 
-                 longitudinalAngle=0, thickness=0):
+    def __init__(self, start=0, center=0, end=0, width=0, latitudinalAngle=0, 
+                 longitudinalAngle=0, plannarAngle=0, thickness=0, length=0):
         """orientation: y is along the brick, z on the big side, x is on the small side"""
-        self.start, self.end, self.width, self.thickness = start, end, width, thickness
-        if (not(start.eq2d(end))):
-            thetaZ = atan2(end.y-start.y, end.x-start.x)
-            if (self.thetaX != pi/2 and self.thetaX != -pi/2):
-                self.length = sqrt((end.y-start.y)**2+(end.x-start.x)**2
-                                   )/cos(self.thetaX)
+        if (start != 0 or end != 0):
+            self.start, self.end, self.width, self.thickness = start, end, width, thickness
+            if (not(start.eq2d(end))):
+                thetaZ = atan2(end.y-start.y, end.x-start.x)
+                if (self.thetaX != pi/2 and self.thetaX != -pi/2):
+                    self.length = sqrt((end.y-start.y)**2+(end.x-start.x)**2
+                                    )/cos(self.thetaX)
+                else:
+                    self.verticalBick()
             else:
+                thetaZ = 0
                 self.verticalBick()
+            self.orientation = Orientation(latitudinalAngle, longitudinalAngle, thetaZ)
+            self.center = Position((start.x+end.x)/2,(start.y+end.y)/2,(start.z+end.z)/2)
         else:
-            thetaZ = 0
-            self.verticalBick()
-        self.orientation = Orientation(latitudinalAngle, longitudinalAngle, thetaZ)
-        self.center = Position((start.x+end.x)/2,(start.y+end.y)/2,(start.z+end.z)/2)
+            self.center, self.length = center, length
+            self.start = Position(center.x-length*cos(plannarAngle), 
+                                  center.y-length/2*sin(plannarAngle))
+            self.end = Position(center.x+length*cos(plannarAngle), 
+                                  center.y+length/2*sin(plannarAngle))
+            self.orientation = Orientation(latitudinalAngle, longitudinalAngle, plannarAngle)
     def verticalBick(self):
         self.length = 0
         print("Unexpected vertical brick")
@@ -91,17 +100,36 @@ threshold = 1 #TODO: define the threshold for a well placed brick
 def getImage():
     move(HOME)
     #code from robothub
-    
+
+def save(image, img_path):
+    #code written the March 15
+    pass
 
 def brickDetection(image):
     # task 1
-    image = getImage()
+    rawImage, normalizedImage = getImage()
+    rawImagePath, normalizedImagePath = 'rawImage.png', 'NormalizedImage.png'
+    save(rawImage, rawImagePath)
+    save(normalizedImage, normalizedImagePath)
+
+    results = detect_planks(
+        raw_image_path   = rawImagePath,
+        color_image_path = normalizedImagePath,
+        save_path        = 'detected_planks.png',
+    )
+    #results : list of (cx, cy, angle) tuples
+    bricks = []*len(results)
+    for i in range(len(results)):
+        bricks[i] = Brick(center=Position(results[i][0], results[i][1], -HOME.z), 
+                          plannarAngle=results[i][2]) 
+    return bricks
 
 def recognizePattern(bricks):
     # task 2
     pass
 
 def catch(position, brick):
+    # robothub code
     # task 4
     move(position, Orientation(0, 0, brick.orientation.z))
 
@@ -120,9 +148,11 @@ def move(position, orientation=None):
         #keep current orientation
         pass
     # task 5
+    # robothub code
     pass
 
 def release():
+    # robothub code
     # task 5
     pass
 
