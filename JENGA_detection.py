@@ -318,9 +318,10 @@ def detect_planks(raw_image_path, color_image_path,
 
     return results
 
-if __name__ == "__main__":
-    results = detect_planks(
-        raw_image_path   = "sampleMarch15.png",
-        color_image_path = "sampleMarch15.png",
-        save_path        = "detected_planks.png",
-    )
+# if __name__ == "__main__":
+#     for i in range(1, 12):
+#         results = detect_planks(
+#             raw_image_path   = "samples/raw_image"+str(i)+".png",
+#             color_image_path = "samples/normalized_color"+str(i)+".png",
+#             save_path        = "detected_planks.png",
+#         )
