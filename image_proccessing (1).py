@@ -1,7 +1,7 @@
 from cv2 import (imread, arrowedLine, circle, cvtColor, COLOR_BGR2RGB, COLOR_BGR2HSV, 
     createCLAHE, GaussianBlur, Sobel, CV_64F, threshold, THRESH_BINARY, 
     getStructuringElement, MORPH_RECT, dilate, IMREAD_GRAYSCALE, Canny, RETR_LIST, 
-    findContours, CHAIN_APPROX_SIMPLE, imwrite, minAreaRect, contourArea, convexHull)
+    findContours, CHAIN_APPROX_SIMPLE, imwrite)
 import numpy as np
 from matplotlib.pyplot import subplots, show, tight_layout
 from math import radians, cos, sin
@@ -96,9 +96,10 @@ def show_overlay(image_path, results, arrow_length=40, figsize=(14, 8), **kwargs
 
 #images to use
 #color img:
-my_color_img='ImagesBW/normalized_colorv2-5.png'
+my_color_img='Test_images12_raw_img_work_with_them\\normalized_color11.png'
 #grey img:
-my_grey_img='ImagesBW/raw_imagev2-5.png'
+my_grey_img='Test_images12_raw_img_work_with_them\\raw_image11.png'
+
 #Extract hue as depth proxy
 color_img = imread(my_color_img)
 hsv = cvtColor(color_img, COLOR_BGR2HSV)
@@ -184,20 +185,20 @@ results = []
 print('Raw detected features fulfilling area condition:')
 
 for cnt in contours:
-    area = contourArea(cnt)
+    area = cv2.contourArea(cnt)
 #    if area < 3000:  # tune this
     if area < 8000:   # only skip tiny noise <=> if area < XXX, don't consider it, else consider it
         continue
         
-    rect = minAreaRect(cnt)
+    rect = cv2.minAreaRect(cnt)
     (cx, cy), (w, h), angle = rect
     if w < h:
         w, h = h, w
         angle += 90
         
     aspect = w / h if h > 0 else 0
-    hull = convexHull(cnt)
-    solidity = area / contourArea(hull)
+    hull = cv2.convexHull(cnt)
+    solidity = area / cv2.contourArea(hull)
     
     print(f"cx={cx:.0f} cy={cy:.0f} | area={area:.0f} | "
           f"aspect={aspect:.2f} | solidity={solidity:.2f} | angle={angle:.1f}°")
@@ -215,7 +216,7 @@ for i in range(0, len(results)):
 for elem in to_remove:
     if elem in results:
         results.remove(elem)
-
+        
 show_overlay('detected_edges_img.png', results)
 show_overlay(my_color_img, results)
 show_overlay(my_grey_img, results)

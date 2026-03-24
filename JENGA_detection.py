@@ -210,7 +210,7 @@ def draw_detections(img_bgr, results, arrow_length=40):
         rad    = radians(angle)
         dx, dy = int(arrow_length * cos(rad)), int(arrow_length * sin(rad))
         arrowedLine(vis,
-                        (int(cx) - dx, int(cy) - dy),
+        		(int(cx), int(cy)),
                         (int(cx) + dx, int(cy) + dy),
                         (0, 200, 255), th, tipLength=0.3)
 
@@ -258,9 +258,9 @@ def detect_planks(raw_image_path, color_image_path,
     """
     if filter_params is None:
         filter_params = dict(
-            w_min=160, w_max=340,
-            h_min=42,  h_max=110,
-            aspect_min=2.5, aspect_max=4,
+            w_min=130, w_max=360,
+            h_min=35,  h_max=110,
+            aspect_min=2.2, aspect_max=5.5,
             solidity_min=0.65,
             score_min=500,
         )
@@ -296,8 +296,7 @@ def detect_planks(raw_image_path, color_image_path,
 
     all_detections = merge_all(r1, r2, r3, r4, r5, r6)
 
-    # Return as simple (cx, cy, angle) tuples 
-    # from (area, w, h, aspect, solidity, cx, cy, angle, rect)
+    # Return as simple (cx, cy, angle) tuples
     results = [(c[5], c[6], c[7]) for c in all_detections]
 
     if show_ or save_path:
@@ -319,10 +318,11 @@ def detect_planks(raw_image_path, color_image_path,
 
     return results
 
-if __name__ == "__main__":
+"""if __name__ == "__main__":
     for i in range(1, 12):
         results = detect_planks(
-            raw_image_path   = "samples/raw_image"+str(i)+".png",
-            color_image_path = "samples/normalized_color"+str(i)+".png",
+            raw_image_path   = "ImagesBW/raw_imagev2-"+str(i)+".png",
+            color_image_path = "ImagesBW/normalized_colorv2-"+str(i)+".png",
             save_path        = "detected_planks.png",
-        )
+	)
+"""

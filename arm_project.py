@@ -1,6 +1,9 @@
 from math import atan2, sqrt, cos, sin, pi
 from sys import exit
 from JENGA_detection import detect_planks
+from getImage import get_single_frame
+import cv2
+from numpy import zeros_like
 
 class Position:
     def __init__(self, x, y, z):
@@ -47,8 +50,8 @@ class Orientation:
             exit(1)
 
 class Brick:
-    def __init__(self, start=0, center=0, end=0, width=24, latitudinalAngle=0, 
-                 longitudinalAngle=0, plannarAngle=0, thickness=14, length=74):
+    def __init__(self, start=0, center=0, end=0, width=0, latitudinalAngle=0, 
+                 longitudinalAngle=0, plannarAngle=0, thickness=0, length=0):
         """orientation: y is along the brick, z on the big side, x is on the small side"""
         if (start != 0 or end != 0):
             self.start, self.end, self.width, self.thickness = start, end, width, thickness
@@ -67,9 +70,9 @@ class Brick:
         else:
             self.center, self.length = center, length
             self.start = Position(center.x-length*cos(plannarAngle), 
-                                  center.y-length/2*sin(plannarAngle))
+                                  center.y-length/2*sin(plannarAngle), center.z)
             self.end = Position(center.x+length*cos(plannarAngle), 
-                                  center.y+length/2*sin(plannarAngle))
+                                  center.y+length/2*sin(plannarAngle), center.z)
             self.orientation = Orientation(latitudinalAngle, longitudinalAngle, plannarAngle)
     def verticalBick(self):
         self.length = 0
@@ -94,32 +97,39 @@ class Move:
                 f" in {len(self.positions)} steps")
 
 #Constants
-HOME = Position(30,-15,40)
-HOME_ORIENTATION = Orientation(-180,0,90)
+HOME = Position(30, -15, 40)
+
 threshold = 1 #TODO: define the threshold for a well placed brick
 
 def getImage():
-    move(HOME)
+    #move(HOME)
+    rtsp_url = "rtsp://admin:admin@192.168.1.10/color"
+    frame_array = get_single_frame(rtsp_url)
+    frame_depth_normalized = zeros_like(frame_array)
+    cv2.normalize(frame_array, frame_depth_normalized, 0, 255, cv2.NORM_MINMAX)
+    colourImage = cv2.applyColorMap(frame_depth_normalized,cv2.COLORMAP_JET)
+    return frame_array, colourImage
     #code from robothub
 
-def save(image, img_path):
+def save(image, imagePath):
     #code written the March 15
-    pass
+    cv2.imwrite(imagePath,image)
 
-def brickDetection(image):
+
+def brickDetection():
     # task 1
-    rawImage, normalizedImage = getImage()
-    rawImagePath, normalizedImagePath = 'rawImage.png', 'NormalizedImage.png'
+    rawImage, colourImage = getImage()
+    rawImagePath, colourImagePath = 'rawImage.png', 'ColourImage.png'
     save(rawImage, rawImagePath)
-    save(normalizedImage, normalizedImagePath)
+    save(colourImage, colourImagePath)
 
     results = detect_planks(
         raw_image_path   = rawImagePath,
-        color_image_path = normalizedImagePath,
+        color_image_path = colourImagePath,
         save_path        = 'detected_planks.png',
     )
     #results : list of (cx, cy, angle) tuples
-    bricks = []*len(results)
+    bricks = [0]*len(results)
     for i in range(len(results)):
         bricks[i] = Brick(center=Position(results[i][0], results[i][1], -HOME.z), 
                           plannarAngle=results[i][2]) 
@@ -179,7 +189,7 @@ def pushBrick(brick, expectedMove):
     pass
 
 def main():
-    print("Task 1: brick deterction")
+    print("Task 1: brick detection")
     bricks = brickDetection()
     print(f"Task 2: pattern recognition & prediction: on {len(bricks)} bricks found")
     moves, movedBricks = recognizePattern(bricks)
