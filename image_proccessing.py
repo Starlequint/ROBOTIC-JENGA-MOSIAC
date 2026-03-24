@@ -1,7 +1,7 @@
 from cv2 import (imread, arrowedLine, circle, cvtColor, COLOR_BGR2RGB, COLOR_BGR2HSV, 
     createCLAHE, GaussianBlur, Sobel, CV_64F, threshold, THRESH_BINARY, 
     getStructuringElement, MORPH_RECT, dilate, IMREAD_GRAYSCALE, Canny, RETR_LIST, 
-    findContours, CHAIN_APPROX_SIMPLE, imwrite)
+    findContours, CHAIN_APPROX_SIMPLE, imwrite, minAreaRect, contourArea, convexHull)
 import numpy as np
 from matplotlib.pyplot import subplots, show, tight_layout
 from math import radians, cos, sin
@@ -185,20 +185,20 @@ results = []
 print('Raw detected features fulfilling area condition:')
 
 for cnt in contours:
-    area = cv2.contourArea(cnt)
+    area = contourArea(cnt)
 #    if area < 3000:  # tune this
     if area < 8000:   # only skip tiny noise <=> if area < XXX, don't consider it, else consider it
         continue
         
-    rect = cv2.minAreaRect(cnt)
+    rect = minAreaRect(cnt)
     (cx, cy), (w, h), angle = rect
     if w < h:
         w, h = h, w
         angle += 90
         
     aspect = w / h if h > 0 else 0
-    hull = cv2.convexHull(cnt)
-    solidity = area / cv2.contourArea(hull)
+    hull = convexHull(cnt)
+    solidity = area / contourArea(hull)
     
     print(f"cx={cx:.0f} cy={cy:.0f} | area={area:.0f} | "
           f"aspect={aspect:.2f} | solidity={solidity:.2f} | angle={angle:.1f}°")
@@ -216,7 +216,7 @@ for i in range(0, len(results)):
 for elem in to_remove:
     if elem in results:
         results.remove(elem)
-        
+
 show_overlay('detected_edges_img.png', results)
 show_overlay(my_color_img, results)
 show_overlay(my_grey_img, results)
