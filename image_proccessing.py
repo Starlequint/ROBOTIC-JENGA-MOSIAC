@@ -180,3 +180,43 @@ show()
 
 #save 'edges'
 imwrite('detected_edges_img.png', edges_closed)
+
+results = []
+print('Raw detected features fulfilling area condition:')
+
+for cnt in contours:
+    area = cv2.contourArea(cnt)
+#    if area < 3000:  # tune this
+    if area < 8000:   # only skip tiny noise <=> if area < XXX, don't consider it, else consider it
+        continue
+        
+    rect = cv2.minAreaRect(cnt)
+    (cx, cy), (w, h), angle = rect
+    if w < h:
+        w, h = h, w
+        angle += 90
+        
+    aspect = w / h if h > 0 else 0
+    hull = cv2.convexHull(cnt)
+    solidity = area / cv2.contourArea(hull)
+    
+    print(f"cx={cx:.0f} cy={cy:.0f} | area={area:.0f} | "
+          f"aspect={aspect:.2f} | solidity={solidity:.2f} | angle={angle:.1f}°")
+    
+    #if 1.5 < aspect < 7.0 and 0.65 < solidity < 0.95:  # tune thresholds
+    if 2.0 < aspect < 5.0:
+        results.append((cx, cy, angle))
+
+#remove duplicates: points that are very close to each other
+to_remove=[]
+for i in range(0, len(results)):
+    for j in range(i+1, len(results)):
+        if (results[i][0]-results[j][0]) < 10 and (results[i][1]-results[j][1]) < 10:
+            to_remove.append(results[j])
+for elem in to_remove:
+    if elem in results:
+        results.remove(elem)
+        
+show_overlay('detected_edges_img.png', results)
+show_overlay(my_color_img, results)
+show_overlay(my_grey_img, results)

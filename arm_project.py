@@ -47,8 +47,8 @@ class Orientation:
             exit(1)
 
 class Brick:
-    def __init__(self, start=0, center=0, end=0, width=0, latitudinalAngle=0, 
-                 longitudinalAngle=0, plannarAngle=0, thickness=0, length=0):
+    def __init__(self, start=0, center=0, end=0, width=24, latitudinalAngle=0, 
+                 longitudinalAngle=0, plannarAngle=0, thickness=14, length=74):
         """orientation: y is along the brick, z on the big side, x is on the small side"""
         if (start != 0 or end != 0):
             self.start, self.end, self.width, self.thickness = start, end, width, thickness
@@ -94,7 +94,8 @@ class Move:
                 f" in {len(self.positions)} steps")
 
 #Constants
-HOME = Position(1,1,1) #TODO: define the position to take the image
+HOME = Position(30,-15,40)
+HOME_ORIENTATION = Orientation(-180,0,90)
 threshold = 1 #TODO: define the threshold for a well placed brick
 
 def getImage():
