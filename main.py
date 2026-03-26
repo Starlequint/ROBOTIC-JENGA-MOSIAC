@@ -151,9 +151,9 @@ def brickDetection():
     bricks = [0]*len(results)
     for i in range(len(results)):
         # convertion to cm
-        results[i][0], results[i][1] = ((results[i][1]+IMG_OFFSET.y)*103.269/rawImage.width, 
-                                        (results[i][0]+IMG_OFFSET.x)*58.422/rawImage.height)
-        bricks[i] = Brick(center=Position(results[i][0], results[i][1], GROUND.z+Brick.THICKNESS/2), 
+        x = (results[i][1]+IMG_OFFSET.y)*103.269/IMG_WIDTH
+        y = (results[i][0]+IMG_OFFSET.x)*58.422/IMG_HEIGHT
+        bricks[i] = Brick(center=Position(x, y, GROUND.z+Brick.THICKNESS/2), 
                           plannarAngle=results[i][2])
     return bricks, results
 
@@ -162,8 +162,10 @@ def recognizePattern(rawData, bricks0):
     bricks = []
     for i in range(len(triangleGroupedData)):
         for j in range(len(triangleGroupedData[i])):
-            bricks.append(Brick(center=Position(triangleGroupedData[i][j][0], 
-                triangleGroupedData[i][j][1], -HOME.z), 
+            # convertion to cm
+            x = (triangleGroupedData[i][j][1]+IMG_OFFSET.y)*103.269/IMG_WIDTH
+            y = (triangleGroupedData[i][j][0]+IMG_OFFSET.x)*58.422/IMG_HEIGHT
+            bricks.append(Brick(center=Position(x, y, -HOME.z), 
                 plannarAngle=triangleGroupedData[i][j][2]))
     moves = [None]*min(len(bricks0), len(bricks))
     iUsed = [len(bricks0)]*min(len(bricks0), len(bricks))

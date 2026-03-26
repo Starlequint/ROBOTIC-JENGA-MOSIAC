@@ -116,19 +116,19 @@ def patternRecognition(detected_points):
     plot_triangles(detected, final_triangles) 
     return final_triangles # [(cx, cy, θ), ...]
 
-detected_points = [ #TEST IM 4
-    (573.7, 321.5, -73.80),   
-    (703.1, 432.3, -15.42),
-    (206.0, 579.8, -7.94),
-    (160.4, 225.2, -79.13),
-    (756.6, 258.6, 49.84),
-    (385.3, 144.4, 86.76),
-    (1040.2, 278.1, -76.61),
-    (1207.8, 335.6, -59.04)
-]
+# detected_points = [ #TEST IM 4
+#     (573.7, 321.5, -73.80),   
+#     (703.1, 432.3, -15.42),
+#     (206.0, 579.8, -7.94),
+#     (160.4, 225.2, -79.13),
+#     (756.6, 258.6, 49.84),
+#     (385.3, 144.4, 86.76),
+#     (1040.2, 278.1, -76.61),
+#     (1207.8, 335.6, -59.04)
+# ]
 
-T = patternRecognition(detected_points)
+# T = patternRecognition(detected_points)
 
-print("detected :", len(detected_points))
-print("recognized :", len(T), len(T[0]))
-print(T)
+# print("detected :", len(detected_points))
+# print("recognized :", len(T), len(T[0]))
+# print(T)
