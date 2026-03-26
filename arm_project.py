@@ -1,6 +1,7 @@
 from math import atan2, sqrt, cos, sin, pi
 from sys import exit
 from JENGA_detection import detect_planks
+from TriangleTessellation import patternRecognition
 from getImage import get_single_frame
 import cv2
 from numpy import zeros_like
@@ -133,11 +134,11 @@ def brickDetection():
     for i in range(len(results)):
         bricks[i] = Brick(center=Position(results[i][0], results[i][1], -HOME.z), 
                           plannarAngle=results[i][2]) 
-    return bricks
+    return bricks, results
 
-def recognizePattern(bricks):
+def recognizePattern(rawData):
+    triangleGroupedData = patternRecognition(rawData)
     # task 2
-    pass
 
 def catch(position, brick):
     # robothub code
