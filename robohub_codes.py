@@ -4,7 +4,8 @@ import os
 import time
 import threading
 
-from kortex_api.autogen.client_stubs.BaseClientRpc import BaseClient, BaseCyclicClient
+from kortex_api.autogen.client_stubs.BaseClientRpc import BaseClient
+from kortex_api.autogen.client_stubs.BaseCyclicClientRpc import BaseCyclicClient
 
 from kortex_api.autogen.messages import Base_pb2, BaseCyclic_pb2, Common_pb2
 from kortex_api.Exceptions.KServerException import KServerException
@@ -272,27 +273,39 @@ def example_angular_action_movement(base):
 
 
 def example_cartesian_action_movement(base, base_cyclic, x=None, y=None, z=None, ox=None, oy=None, oz=None):
-    
+    feedback = base_cyclic.RefreshFeedback()
+    x0 =  feedback.base.tool_pose_x
+    y0 =  feedback.base.tool_pose_y
+    z0 =  feedback.base.tool_pose_z
+    ox0 = feedback.base.tool_pose_theta_x
+    oy0 = feedback.base.tool_pose_theta_y
+    oz0 = feedback.base.tool_pose_theta_z
+    print(x0, y0, z0)
     print("Starting Cartesian action movement ...")
     action = Base_pb2.Action()
     action.name = "Example Cartesian action movement"
     action.application_data = ""
 
-    feedback = base_cyclic.RefreshFeedback()
+    #feedback = base_cyclic.RefreshFeedback()
 
     cartesian_pose = action.reach_pose.target_pose
     if  x == None:  cartesian_pose.x = feedback.base.tool_pose_x          # (meters)
-    else:          cartesian_pose.x = x # feedback.base.tool_pose_x          # (meters)
+    #else:          cartesian_pose.x = x # feedback.base.tool_pose_x          # (meters)
+    else:          cartesian_pose.x =  feedback.base.tool_pose_x -x-x0         # (meters)
     if  y == None:  cartesian_pose.y = feedback.base.tool_pose_y     # (meters)
-    else:          cartesian_pose.y = y # feedback.base.tool_pose_y - 0.1    # (meters)
+    else:          cartesian_pose.y = feedback.base.tool_pose_y - y - y0    # (meters)
     if  z == None:  cartesian_pose.z = feedback.base.tool_pose_z    # (meters)
-    else:          cartesian_pose.z = z # feedback.base.tool_pose_z - 0.2    # (meters)
+    #else:          cartesian_pose.z = z # feedback.base.tool_pose_z - 0.2    # (meters)
+    else:          cartesian_pose.z =  feedback.base.tool_pose_z - z  -z0  # (meters)
     if ox == None: cartesian_pose.theta_x = feedback.base.tool_pose_theta_x # (degrees)
-    else:          cartesian_pose.theta_x = ox # feedback.base.tool_pose_theta_x # (degrees)
+    #else:          cartesian_pose.theta_x = ox # feedback.base.tool_pose_theta_x # (degrees)
+    else:          cartesian_pose.theta_x = feedback.base.tool_pose_theta_x -ox-ox0# (degrees)
     if oy == None: cartesian_pose.theta_y = feedback.base.tool_pose_theta_y # (degrees)
-    else:          cartesian_pose.theta_y = oy # feedback.base.tool_pose_theta_y # (degrees)
+    #else:          cartesian_pose.theta_y = oy # feedback.base.tool_pose_theta_y # (degrees)
+    else:          cartesian_pose.theta_y = feedback.base.tool_pose_theta_y -oy-oy0# (degrees)
     if oz == None: cartesian_pose.theta_z = feedback.base.tool_pose_theta_z # (degrees)
-    else:          cartesian_pose.theta_z = oz # feedback.base.tool_pose_theta_z # (degrees)
+    #else:          cartesian_pose.theta_z = oz # feedback.base.tool_pose_theta_z # (degrees)
+    else:          cartesian_pose.theta_z = feedback.base.tool_pose_theta_z -oz-oz0# (degrees)
 
     e = threading.Event()
     notification_handle = base.OnNotificationActionTopic(
