@@ -102,12 +102,12 @@ class Move:
                 f" in {len(self.positions)} steps")
 
 #Constants
-IMG_WIDTH  = 1280
-IMG_HEIGHT = 720
-HOME = Position(30, -15, 40) #cm
-IMG_OFFSET = Position(-150-516.3, 300-292.11, 0) #mm
+IMG_WIDTH  = 1280 # pixels
+IMG_HEIGHT = 720 # pixels
+HOME = Position(30, -15, 40) # cm
+IMG_OFFSET = Position(-150-516.3, 300-292.11, 0) # mm
 GROUND = Position(None, None, 0)
-CATCH_o = (180, 0, None)
+CATCH_o = (180, 0, None) # °
 threshold = 1 #TODO: define the threshold for a well placed brick
 
 def getImage():
