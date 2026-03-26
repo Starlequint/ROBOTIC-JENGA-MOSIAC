@@ -71,10 +71,10 @@ class Brick:
                     self.length = sqrt((end.y-start.y)**2+(end.x-start.x)**2
                                     )/cos(self.thetaX)
                 else:
-                    self.verticalBick()
+                    self.verticalBrick()
             else:
                 thetaZ = 0
-                self.verticalBick()
+                self.verticalBrick()
             self.orientation = Orientation(latitudinalAngle, longitudinalAngle, thetaZ)
             self.center = Position((start.x+end.x)/2,(start.y+end.y)/2,(start.z+end.z)/2)
         else:
@@ -84,7 +84,7 @@ class Brick:
             self.end = Position(center.x+self.LENGTH*cos(plannarAngle), 
                                   center.y+self.LENGTH/2*sin(plannarAngle), center.z)
             self.orientation = Orientation(latitudinalAngle, longitudinalAngle, plannarAngle)
-    def verticalBick(self):
+    def verticalBrick(self):
         self.length = 0
         print("Unexpected vertical brick")
     def __eq__(self, other):
@@ -108,8 +108,8 @@ class Move:
         self.start, self.end = positions[0], positions[-1]
         self.O0, self.OEnd = orientations[0], orientations[-1]
     def display(self):
-        return ("from "+self.start.display()+' '+self.thetaZ0.display()+" to "+
-                self.end.display()+' '+self.self.thetaZEnd.display()+
+        return ("from "+self.start.display()+' '+self.O0.display()+" to "+
+                self.end.display()+' '+self.OEnd.display()+
                 f" in {len(self.positions)} steps")
 
 #Constants
@@ -150,7 +150,7 @@ def brickDetection():
     #results : list of (cx, cy, angle) tuples
     bricks = [0]*len(results)
     for i in range(len(results)):
-        # convertion in cm
+        # convertion to cm
         results[i][0], results[i][1] = ((results[i][1]+IMG_OFFSET.y)*103.269/rawImage.width, 
                                         (results[i][0]+IMG_OFFSET.x)*58.422/rawImage.height)
         bricks[i] = Brick(center=Position(results[i][0], results[i][1], GROUND.z+Brick.THICKNESS/2), 
@@ -228,7 +228,7 @@ def moveBrick(gripper, moves):
         move(moves.positions[j], moves.orientations[j])
     release(gripper)
     move(Position(moves[-1].end.x, moves[-1].end.y, moves[-1].end.z+2*Brick.THICKNESS),
-        Orientation(moves[-1].endO))
+        Orientation(moves[-1].OEnd))
 
 def brickPlaced(position, bricks):
     # task 3
