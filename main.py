@@ -60,9 +60,9 @@ class Orientation:
             sys.exit(1)
 
 class Brick:
-    LENGTH   : Final[float] = 74 # cm
-    WIDTH    : Final[float] = 24 # cm
-    THICKNESS: Final[float] = 14 # cm
+    LENGTH   : Final[float] = 7.4 # cm
+    WIDTH    : Final[float] = 2.4 # cm
+    THICKNESS: Final[float] = 1.4 # cm
     def __init__(self, center=0, latitudinalAngle=0, 
                  longitudinalAngle=0, plannarAngle=0):
         """orientation: y is along the brick, z on the big side, x is on the small side"""
@@ -109,6 +109,7 @@ IMG_OFFSET = Position(-150-516.3, 300-292.11, 0) # mm
 GROUND = Position(None, None, 0)
 CATCH_o = (180, 0, None) # °
 threshold = 1 #TODO: define the threshold for a well placed brick
+GRIPPER_WIDTH = 5 # cm
 
 def getImage():
     move(HOME)
@@ -181,7 +182,10 @@ def initGripper(router):
     return GripperCommandExample(router)
 
 def catch(gripper):
-    gripper.close(Brick.WIDTH)
+    """
+    position = 0.0 open, 1.0 closed
+    """
+    gripper.close(1-Brick.WIDTH/GRIPPER_WIDTH)
 
 def release(gripper):
     gripper.open()
@@ -242,7 +246,28 @@ def findMisplaced(position, bricks):
 
 def pushBrick(brick, expectedMove):
     # task 5
-    pass
+    #approach the brick and push it towards the expected location
+
+    APPROACH_Z = 2*Brick.THICKNESS
+    PUSH_Z = Brick.THICKNESS
+
+    target = expectedMove.end
+    yaw = brick.orientation.z
+    push_orientation = Orientation(CATCH_o.x, CATCH_o.y, yaw)
+    end_orientation = Orientation(CATCH_o.x, CATCH_o.y, expectedMove.OEnd)
+
+    above_start = Position(brick.center.x, brick.center.y, brick.center.z + APPROACH_Z)
+    contact_start = Position(brick.center.x, brick.center.y, brick.center.z + PUSH_Z)
+    contact_end = Position(target.x, target.y, brick.center.z + PUSH_Z)
+    above_end = Position(target.x, target.y, brick.center.z + APPROACH_Z)
+
+    # Keep gripper open for a push correction
+    # send_gripper(0.0)
+
+    move(above_start, push_orientation)
+    move(contact_start, push_orientation)
+    move(contact_end, end_orientation)
+    move(above_end, end_orientation)
 
 def forwardKinematics(base, angles):
     T = example_forward_kinematics(base, angles)

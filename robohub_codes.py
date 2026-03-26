@@ -312,3 +312,14 @@ def example_cartesian_action_movement(base, base_cyclic, x=None, y=None, z=None,
     else:
         print("Timeout on action notification wait")
     return finished
+
+def wait_for_action_end(base, action):
+    e = threading.Event()
+    notification_handle = base.OnNotificationActionTopic(
+        check_for_end_or_abort(e),
+        Base_pb2.NotificationOptions()
+    )
+    base.ExecuteAction(action)
+    finished = e.wait(TIMEOUT_DURATION)
+    base.Unsubscribe(notification_handle)
+    return finished
