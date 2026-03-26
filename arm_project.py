@@ -1,11 +1,21 @@
 from math import atan2, sqrt, cos, sin, pi
-from sys import exit
 from JENGA_detection import detect_planks
 from TriangleTessellation import patternRecognition
+from move import moveCarteresian
+from grip import GripperCommandExample
+from kinematic import example_forward_kinematics, example_inverse_kinematics
 from getImage import get_single_frame
 import cv2
 from numpy import zeros_like
 from typing import Final
+import argparse
+import utilities
+import sys
+import os
+from kortex_api.autogen.client_stubs.BaseClientRpc import BaseClient
+
+from kortex_api.autogen.messages import Base_pb2
+from kortex_api.Exceptions.KServerException import KServerException
 
 class Position:
     def __init__(self, x, y, z):
@@ -25,13 +35,13 @@ class Position:
             return sqrt((self.x-other.x)**2+(self.y-other.y)**2+(self.z-other.z)**2)
         else:
             print("Position::distance() misused")
-            exit(1)
+            sys.exit(1)
     def distance2d(self, other):
         if isinstance(other, Position):
             return sqrt((self.x-other.x)**2+(self.y-other.y)**2)
         else:
             print("Position::distance2d() misused")
-            exit(1)
+            sys.exit(1)
     def norm(self):
         return sqrt(self.x**2+self.y**2+self.z**2)
 
@@ -49,7 +59,7 @@ class Orientation:
             return sqrt((self.x-other.x)**2+(self.y-other.y)**2+(self.z-other.z)**2)
         else:
             print("Orientation::distance() misused")
-            exit(1)
+            sys.exit(1)
 
 class Brick:
     LENGTH   : Final[float] = 74 # cm
@@ -88,7 +98,7 @@ class Brick:
                     and self.orientation.z == other.orientation.z)
         else:
             print("Brick::==() misused")
-            exit(1)
+            sys.exit(1)
             
 class Move:
     def __init__(self, positions, orientations):
@@ -96,10 +106,10 @@ class Move:
         self.orientations = orientations
         if len(positions) < 2: 
             print("Error: this move lack of positions")
-            exit(1)
+            sys.exit(1)
         elif len(positions) != len(orientations):
             print("Error: A move must have the same # of orientation and positions")
-            exit(1)
+            sys.exit(1)
         self.start, self.end = positions[0], positions[-1]
         self.O0, self.OEnd = orientations[0], orientations[-1]
     def display(self):
@@ -176,10 +186,19 @@ def recognizePattern(rawData, bricks0):
                          Orientation(CATCH_o.x, CATCH_o.y, bricks[j].orientation.z)])
     return moves, bricks
 
-def catch(position, brick):
+def catch():
     # robothub code
     # task 4
-    move(position, Orientation(0, 0, brick.orientation.z))
+    sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
+
+    # Parse arguments
+    parser = argparse.ArgumentParser()
+    args = utilities.parseConnectionArguments(parser)
+
+    # Create connection to the device and get the router
+    with utilities.DeviceConnection.createTcpConnection(args) as router:
+        example = GripperCommandExample(router)
+        example.close(Brick.WIDTH)
 
 def inBoundaries(position):
     """ Boundaries: Table, Joint limits, computer """
@@ -190,11 +209,20 @@ def inBoundaries(position):
 
 def move(position, orientation=None):
     if not(inBoundaries(position)):
-        print("Attempt to exceed the robot limits: "+position)
-        exit(1)
+        print("Attempt to exceed the robot limits:", position)
+        sys.exit(1)
+    #convert position in meter and orientation in degree (already done for orientations)
+    print("Before conversion:", position.x, position.y, position.z)
+    x, y, z = position.x/100, position.y/100, position.z/100
+    print("After conversion:", position.x, position.y, position.z)
+
     if orientation==None:
         #keep current orientation
-        pass
+        moveCarteresian(x, y, z)
+    else:
+        ox, oy, oz = orientation.x, orientation.y, orientation.z
+        # ox, oy, oz = orientation.x*180/pi, orientation.y*180/pi, orientation.z*180/pi
+        moveCarteresian(x, y, z, ox, oy, oz)
     # task 5
     # robothub code
     pass
@@ -202,6 +230,16 @@ def move(position, orientation=None):
 def release():
     # robothub code
     # task 5
+    sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
+
+    # Parse arguments
+    parser = argparse.ArgumentParser()
+    args = utilities.parseConnectionArguments(parser)
+
+    # Create connection to the device and get the router
+    with utilities.DeviceConnection.createTcpConnection(args) as router:
+        example = GripperCommandExample(router)
+        example.open()
     pass
 
 def brickPlaced(position, bricks):
@@ -225,28 +263,51 @@ def pushBrick(brick, expectedMove):
     # task 5
     pass
 
+def forwardKinematics(base, angles):
+    T = example_forward_kinematics(base, angles)
+    # return Position(T[0], T[1], T[2]), Orientation(T[3], T[4], T[5])
+    return Position(100*T[0], 100*T[1], 100*T[2]), Orientation(T[3], T[4], T[5])
+
+def InverseKinematics(base, position, orientation):
+    # return example_inverse_kinematics(base, position.x, position.y, position.z, 
+    #                                   orientation.x, orientation.y, orientation.z)
+    return example_inverse_kinematics(base, position.x/100, position.y/100, position.z/100, 
+                                      orientation.x, orientation.y, orientation.z)        
+
 def main():
-    print("Task 1: brick detection")
-    bricks, rawData = brickDetection()
-    print(f"Task 2: pattern recognition & prediction: on {len(bricks)} bricks found")
-    moves, movedBricks = recognizePattern(rawData, bricks)
-    if (len(moves) != len(movedBricks)): 
-        print("Incoherent outputs from the pattern recognition")
-        exit(1)
-    print(f"Task 5 : robot arm movement: {len(moves)} moves are coming.")
-    for i in range(len(moves)):
-        print(f"Move {i} starts : "+moves[i].display())
-        if i==0: print("Task 4: New brick picking")
-        catch(moves[i].start, moves[i].O0)
-        for j in range(1, len(moves[i].positions)):
-            move(moves[i].positions[j], moves[i].orientations[j])
-        release()
-        if i==0: print("Task 3: Feedback mapping")
-        currentBricks = brickDetection()
-        if not(brickPlaced(moves[i].start, currentBricks)):
-            print("Brick misplaced : push attempt coming")
-            misplacedBrick = findMisplaced(moves[i].start, currentBricks)
-            pushBrick(misplacedBrick, moves[i])
+    sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
+    import utilities
+
+    # Parse arguments
+    args = utilities.parseConnectionArguments()
+    
+    # Create connection to the device and get the router
+    with utilities.DeviceConnection.createTcpConnection(args) as router:
+        # Create required services
+        base = BaseClient(router)
+        print("Task 1: brick detection")
+        bricks, rawData = brickDetection()
+        print(f"Task 2: pattern recognition & prediction: on {len(bricks)} bricks found")
+        moves, movedBricks = recognizePattern(rawData, bricks)
+        if (len(moves) != len(movedBricks)): 
+            print("Incoherent outputs from the pattern recognition")
+            sys.exit(1)
+        print(f"Task 5 : robot arm movement: {len(moves)} moves are coming.")
+        for i in range(len(moves)):
+            print(f"Move {i} starts : "+moves[i].display())
+            if i==0: print("Task 4: New brick picking")
+            catch(moves[i].start, moves[i].O0)
+            for j in range(1, len(moves[i].positions)):
+                move(moves[i].positions[j], moves[i].orientations[j])
+            release()
+            move(Position(moves[-1].end.x, moves[-1].end.y, moves[-1].end.z+2*Brick.THICKNESS),
+                Orientation(moves[-1].endO))
+            if i==0: print("Task 3: Feedback mapping")
+            currentBricks = brickDetection()
+            if not(brickPlaced(moves[i].start, currentBricks)):
+                print("Brick misplaced : push attempt coming")
+                misplacedBrick = findMisplaced(moves[i].start, currentBricks)
+                pushBrick(misplacedBrick, moves[i])
     print("Tasks completed !")
 
 if __name__ == '__main__':
