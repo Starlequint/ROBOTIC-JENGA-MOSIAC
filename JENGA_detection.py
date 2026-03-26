@@ -216,6 +216,7 @@ def draw_detections(img_bgr, results, arrow_length=40):
 
         # Number label: white outline + black text
         label  = str(i + 1)
+        # label = str(round((cx+10)/10,0))+", "+str(round((cy+10)/10,0))
         lx, ly = int(cx) + 10, int(cy) - 10
         putText(vis, label, (lx, ly), FONT_HERSHEY_SIMPLEX, fs, (255, 255, 255), th + 4)
         putText(vis, label, (lx, ly), FONT_HERSHEY_SIMPLEX, fs, (0,   0,   0),   th + 1)
@@ -318,8 +319,9 @@ def detect_planks(raw_image_path, color_image_path,
 
     return results
 
-"""if __name__ == "__main__":
-    for i in range(1, 12):
+"""
+if __name__ == "__main__":
+    for i in range(1,15):
         results = detect_planks(
             raw_image_path   = "ImagesBW/raw_imagev2-"+str(i)+".png",
             color_image_path = "ImagesBW/normalized_colorv2-"+str(i)+".png",

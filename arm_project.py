@@ -115,8 +115,10 @@ class Move:
                 f" in {len(self.positions)} steps")
 
 #Constants
+IMG_WIDTH  = 1280
+IMG_HEIGHT = 720
 HOME = Position(30, -15, 40) #cm
-IMG_OFFSET = Position(30, -15, 0)
+IMG_OFFSET = Position(-150-516.3, 300-292.11, 0) #mm
 GROUND = Position(None, None, 0)
 CATCH_o = (180, 0, None)
 threshold = 1 #TODO: define the threshold for a well placed brick
@@ -151,8 +153,8 @@ def brickDetection():
     bricks = [0]*len(results)
     for i in range(len(results)):
         # convertion in cm
-        results[i][0], results[i][1] = ((results[0]-IMG_OFFSET.x)*103.269/rawImage.width, 
-            (results[i][1]-IMG_OFFSET.y)*58.422/rawImage.height)
+        results[i][0], results[i][1] = ((results[i][1]+IMG_OFFSET.y)*103.269/rawImage.width, 
+                                        (results[i][0]+IMG_OFFSET.x)*58.422/rawImage.height)
         bricks[i] = Brick(center=Position(results[i][0], results[i][1], GROUND.z+Brick.THICKNESS/2), 
                           plannarAngle=results[i][2])
     return bricks, results
