@@ -1,11 +1,9 @@
 from math import atan2, sqrt, cos, sin, pi
 from JENGA_detection import detect_planks
 from TriangleTessellation import patternRecognition
-from move import moveCarteresian
-from grip import GripperCommandExample
-from kinematic import example_forward_kinematics, example_inverse_kinematics
 from getImage import get_single_frame
-from robohub_codes import initBase
+from robohub_codes import (initBase, example_forward_kinematics, example_inverse_kinematics, 
+                           GripperCommandExample, moveCarteresian)
 import cv2
 from numpy import zeros_like
 from typing import Final
