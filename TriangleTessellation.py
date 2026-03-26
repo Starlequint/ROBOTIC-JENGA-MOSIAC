@@ -127,6 +127,8 @@ detected_points = [ #TEST IM 4
     (1207.8, 335.6, -59.04)
 ]
 
-patternRecognition(detected_points)
+T = patternRecognition(detected_points)
 
-
+print("detected :", len(detected_points))
+print("recognized :", len(T), len(T[0]))
+print(T)

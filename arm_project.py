@@ -5,6 +5,7 @@ from TriangleTessellation import patternRecognition
 from getImage import get_single_frame
 import cv2
 from numpy import zeros_like
+from typing import Final
 
 class Position:
     def __init__(self, x, y, z):
@@ -51,11 +52,14 @@ class Orientation:
             exit(1)
 
 class Brick:
-    def __init__(self, start=0, center=0, end=0, width=0, latitudinalAngle=0, 
-                 longitudinalAngle=0, plannarAngle=0, thickness=0, length=0):
+    LENGTH   : Final[float] = 74 # cm
+    WIDTH    : Final[float] = 24 # cm
+    THICKNESS: Final[float] = 14 # cm
+    def __init__(self, start=0, center=0, end=0, latitudinalAngle=0, 
+                 longitudinalAngle=0, plannarAngle=0):
         """orientation: y is along the brick, z on the big side, x is on the small side"""
         if (start != 0 or end != 0):
-            self.start, self.end, self.width, self.thickness = start, end, width, thickness
+            self.start, self.end = start, end
             if (not(start.eq2d(end))):
                 thetaZ = atan2(end.y-start.y, end.x-start.x)
                 if (self.thetaX != pi/2 and self.thetaX != -pi/2):
@@ -69,16 +73,22 @@ class Brick:
             self.orientation = Orientation(latitudinalAngle, longitudinalAngle, thetaZ)
             self.center = Position((start.x+end.x)/2,(start.y+end.y)/2,(start.z+end.z)/2)
         else:
-            self.center, self.length = center, length
-            self.start = Position(center.x-length*cos(plannarAngle), 
-                                  center.y-length/2*sin(plannarAngle), center.z)
-            self.end = Position(center.x+length*cos(plannarAngle), 
-                                  center.y+length/2*sin(plannarAngle), center.z)
+            self.center = center
+            self.start = Position(center.x-self.LENGTH*cos(plannarAngle), 
+                                  center.y-self.LENGTH/2*sin(plannarAngle), center.z)
+            self.end = Position(center.x+self.LENGTH*cos(plannarAngle), 
+                                  center.y+self.LENGTH/2*sin(plannarAngle), center.z)
             self.orientation = Orientation(latitudinalAngle, longitudinalAngle, plannarAngle)
     def verticalBick(self):
         self.length = 0
         print("Unexpected vertical brick")
-
+    def __eq__(self, other):
+        if isinstance(other, Brick):
+            return (self.center.x == other.center.x and self.center.y == other.center.y 
+                    and self.orientation.z == other.orientation.z)
+        else:
+            print("Brick::==() misused")
+            exit(1)
             
 class Move:
     def __init__(self, positions, orientations):
@@ -91,19 +101,20 @@ class Move:
             print("Error: A move must have the same # of orientation and positions")
             exit(1)
         self.start, self.end = positions[0], positions[-1]
-        self.thetaZ0, self.thetaZEnd = orientations[0], orientations[-1]
+        self.O0, self.OEnd = orientations[0], orientations[-1]
     def display(self):
         return ("from "+self.start.display()+' '+self.thetaZ0.display()+" to "+
                 self.end.display()+' '+self.self.thetaZEnd.display()+
                 f" in {len(self.positions)} steps")
 
 #Constants
-HOME = Position(30, -15, 40)
-
+HOME = Position(30, -15, 40) #cm
+GROUND = Position(None, None, 0)
+CATCH_o = (180, 0, None)
 threshold = 1 #TODO: define the threshold for a well placed brick
 
 def getImage():
-    #move(HOME)
+    move(HOME)
     rtsp_url = "rtsp://admin:admin@192.168.1.10/color"
     frame_array = get_single_frame(rtsp_url)
     frame_depth_normalized = zeros_like(frame_array)
@@ -132,13 +143,38 @@ def brickDetection():
     #results : list of (cx, cy, angle) tuples
     bricks = [0]*len(results)
     for i in range(len(results)):
-        bricks[i] = Brick(center=Position(results[i][0], results[i][1], -HOME.z), 
+        bricks[i] = Brick(center=Position(results[i][0], results[i][1], GROUND.z+Brick.THICKNESS/2), 
                           plannarAngle=results[i][2]) 
     return bricks, results
 
-def recognizePattern(rawData):
-    triangleGroupedData = patternRecognition(rawData)
-    # task 2
+def recognizePattern(rawData, bricks0):
+    triangleGroupedData = patternRecognition(rawData) #none redondant list of triangles
+    bricks = []
+    for i in range(len(triangleGroupedData)):
+        for j in range(len(triangleGroupedData[i])):
+            bricks.append(Brick(center=Position(triangleGroupedData[i][j][0], 
+                triangleGroupedData[i][j][1], -HOME.z), 
+                plannarAngle=triangleGroupedData[i][j][2]))
+    moves = [None]*min(len(bricks0), len(bricks))
+    iUsed = [len(bricks0)]*min(len(bricks0), len(bricks))
+    for j in range(min(len(bricks0), len(bricks))):
+        iClosest = 0
+        for i in range(1, len(bricks0)):
+            if (not(bricks0[i] in [bricks[0], bricks[1], bricks[2]])):
+                if (i not in iUsed and bricks[j].distance2d(bricks0[i]) < bricks[j].distance2d(bricks0[iClosest])):
+                    iClosest = i
+            else: 
+                print("model brick: ", bricks0[i])
+        iUsed[j] = iClosest
+        c1, c2 = bricks0[iClosest].center, bricks[j].center
+        moves[j] = Move([c1, Position(c1.x, c1.y, c1.z+2*Brick.THICKNESS),
+                         Position(c2.x, c2.y, c2.z+2*Brick.THICKNESS),
+                         Position(c2.x, c2.y, c2.z+0.5*Brick.THICKNESS)],
+                        [Orientation(CATCH_o.x, CATCH_o.y, bricks0[iClosest].orientation.z),
+                         Orientation(CATCH_o.x, CATCH_o.y, bricks0[iClosest].orientation.z),
+                         Orientation(CATCH_o.x, CATCH_o.y, bricks[j].orientation.z),
+                         Orientation(CATCH_o.x, CATCH_o.y, bricks[j].orientation.z)])
+    return moves, bricks
 
 def catch(position, brick):
     # robothub code
@@ -148,9 +184,9 @@ def catch(position, brick):
 def inBoundaries(position):
     """ Boundaries: Table, Joint limits, computer """
     #TODO: complete with the computer limit
-    if (position.z < 0 or position.norm() < 420.8 or 902.0 < position.norm()):
-        return False
-    else: return True
+    # if (position.z < 0 or position.norm() < 420.8 or 902.0 < position.norm()):
+    #     return False
+    return True
 
 def move(position, orientation=None):
     if not(inBoundaries(position)):
@@ -191,9 +227,9 @@ def pushBrick(brick, expectedMove):
 
 def main():
     print("Task 1: brick detection")
-    bricks = brickDetection()
+    bricks, rawData = brickDetection()
     print(f"Task 2: pattern recognition & prediction: on {len(bricks)} bricks found")
-    moves, movedBricks = recognizePattern(bricks)
+    moves, movedBricks = recognizePattern(rawData, bricks)
     if (len(moves) != len(movedBricks)): 
         print("Incoherent outputs from the pattern recognition")
         exit(1)
@@ -201,7 +237,7 @@ def main():
     for i in range(len(moves)):
         print(f"Move {i} starts : "+moves[i].display())
         if i==0: print("Task 4: New brick picking")
-        catch(moves[i].start, moves[i].thetaZ0)
+        catch(moves[i].start, moves[i].O0)
         for j in range(1, len(moves[i].positions)):
             move(moves[i].positions[j], moves[i].orientations[j])
         release()
