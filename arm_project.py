@@ -5,6 +5,7 @@ from move import moveCarteresian
 from grip import GripperCommandExample
 from kinematic import example_forward_kinematics, example_inverse_kinematics
 from getImage import get_single_frame
+from robohub_codes import initBase
 import cv2
 from numpy import zeros_like
 from typing import Final
@@ -12,10 +13,6 @@ import argparse
 import utilities
 import sys
 import os
-from kortex_api.autogen.client_stubs.BaseClientRpc import BaseClient
-
-from kortex_api.autogen.messages import Base_pb2
-from kortex_api.Exceptions.KServerException import KServerException
 
 class Position:
     def __init__(self, x, y, z):
@@ -119,6 +116,7 @@ class Move:
 
 #Constants
 HOME = Position(30, -15, 40) #cm
+IMG_OFFSET = Position(30, -15, 0)
 GROUND = Position(None, None, 0)
 CATCH_o = (180, 0, None)
 threshold = 1 #TODO: define the threshold for a well placed brick
@@ -137,7 +135,6 @@ def save(image, imagePath):
     #code written the March 15
     cv2.imwrite(imagePath,image)
 
-
 def brickDetection():
     # task 1
     rawImage, colourImage = getImage()
@@ -153,8 +150,11 @@ def brickDetection():
     #results : list of (cx, cy, angle) tuples
     bricks = [0]*len(results)
     for i in range(len(results)):
+        # convertion in cm
+        results[i][0], results[i][1] = ((results[0]-IMG_OFFSET.x)*103.269/rawImage.width, 
+            (results[i][1]-IMG_OFFSET.y)*58.422/rawImage.height)
         bricks[i] = Brick(center=Position(results[i][0], results[i][1], GROUND.z+Brick.THICKNESS/2), 
-                          plannarAngle=results[i][2]) 
+                          plannarAngle=results[i][2])
     return bricks, results
 
 def recognizePattern(rawData, bricks0):
@@ -186,19 +186,14 @@ def recognizePattern(rawData, bricks0):
                          Orientation(CATCH_o.x, CATCH_o.y, bricks[j].orientation.z)])
     return moves, bricks
 
-def catch():
-    # robothub code
-    # task 4
-    sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
+def initGripper(router):
+    return GripperCommandExample(router)
 
-    # Parse arguments
-    parser = argparse.ArgumentParser()
-    args = utilities.parseConnectionArguments(parser)
+def catch(gripper):
+    gripper.close(Brick.WIDTH)
 
-    # Create connection to the device and get the router
-    with utilities.DeviceConnection.createTcpConnection(args) as router:
-        example = GripperCommandExample(router)
-        example.close(Brick.WIDTH)
+def release(gripper):
+    gripper.open()
 
 def inBoundaries(position):
     """ Boundaries: Table, Joint limits, computer """
@@ -227,20 +222,13 @@ def move(position, orientation=None):
     # robothub code
     pass
 
-def release():
-    # robothub code
-    # task 5
-    sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
-
-    # Parse arguments
-    parser = argparse.ArgumentParser()
-    args = utilities.parseConnectionArguments(parser)
-
-    # Create connection to the device and get the router
-    with utilities.DeviceConnection.createTcpConnection(args) as router:
-        example = GripperCommandExample(router)
-        example.open()
-    pass
+def moveBrick(gripper, moves):
+    catch(gripper, moves.start, moves.O0)
+    for j in range(1, len(moves.positions)):
+        move(moves.positions[j], moves.orientations[j])
+    release(gripper)
+    move(Position(moves[-1].end.x, moves[-1].end.y, moves[-1].end.z+2*Brick.THICKNESS),
+        Orientation(moves[-1].endO))
 
 def brickPlaced(position, bricks):
     # task 3
@@ -276,15 +264,15 @@ def InverseKinematics(base, position, orientation):
 
 def main():
     sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
-    import utilities
-
     # Parse arguments
-    args = utilities.parseConnectionArguments()
+    parser = argparse.ArgumentParser()
+    args = utilities.parseConnectionArguments(parser)
     
     # Create connection to the device and get the router
     with utilities.DeviceConnection.createTcpConnection(args) as router:
         # Create required services
-        base = BaseClient(router)
+        base = initBase(router)
+        gripper = initGripper(router)
         print("Task 1: brick detection")
         bricks, rawData = brickDetection()
         print(f"Task 2: pattern recognition & prediction: on {len(bricks)} bricks found")
@@ -296,18 +284,14 @@ def main():
         for i in range(len(moves)):
             print(f"Move {i} starts : "+moves[i].display())
             if i==0: print("Task 4: New brick picking")
-            catch(moves[i].start, moves[i].O0)
-            for j in range(1, len(moves[i].positions)):
-                move(moves[i].positions[j], moves[i].orientations[j])
-            release()
-            move(Position(moves[-1].end.x, moves[-1].end.y, moves[-1].end.z+2*Brick.THICKNESS),
-                Orientation(moves[-1].endO))
+            moveBrick(gripper, moves)
             if i==0: print("Task 3: Feedback mapping")
             currentBricks = brickDetection()
             if not(brickPlaced(moves[i].start, currentBricks)):
                 print("Brick misplaced : push attempt coming")
                 misplacedBrick = findMisplaced(moves[i].start, currentBricks)
-                pushBrick(misplacedBrick, moves[i])
+                moveBrick(gripper, moves)
+                # pushBrick(misplacedBrick, moves[i])
     print("Tasks completed !")
 
 if __name__ == '__main__':
