@@ -1,9 +1,9 @@
-from math import atan2, sqrt, cos, sin, pi
+from math import atan2, sqrt, cos, sin, pi, isclose
 from JENGA_detection import detect_planks
 from TriangleTessellation import patternRecognition
 from getImage import get_single_frame
 from robohub_codes import (initBase, example_forward_kinematics, example_inverse_kinematics, 
-                           GripperCommandExample, moveCarteresian)
+                           GripperCommandExample, example_cartesian_action_movement)
 import cv2
 from numpy import zeros_like
 from typing import Final
@@ -19,11 +19,14 @@ class Position:
         return f"({round(self.x,3)},{round(self.y,3)},{round(self.z,3)})mm"
     def __eq__(self, other):
         if isinstance(other, Position):
-            return self.x == other.x and self.y == other.y and self.z == other.z
+            return (isclose(self.x, other.x, rel_tol=1e-9) and 
+                    isclose(self.y, other.y, rel_tol=1e-9) and
+                    isclose(self.z, other.z, rel_tol=1e-9))
         return False
     def eq2d(self, other):
         if isinstance(other, Position):
-            return self.x == other.x and self.y == other.y
+            return (isclose(self.x, other.x, rel_tol=1e-9) and 
+                    isclose(self.y, other.y, rel_tol=1e-9))
         return False
     def distance(self, other):
         if isinstance(other, Position):
@@ -60,37 +63,23 @@ class Brick:
     LENGTH   : Final[float] = 74 # cm
     WIDTH    : Final[float] = 24 # cm
     THICKNESS: Final[float] = 14 # cm
-    def __init__(self, start=0, center=0, end=0, latitudinalAngle=0, 
+    def __init__(self, center=0, latitudinalAngle=0, 
                  longitudinalAngle=0, plannarAngle=0):
         """orientation: y is along the brick, z on the big side, x is on the small side"""
-        if (start != 0 or end != 0):
-            self.start, self.end = start, end
-            if (not(start.eq2d(end))):
-                thetaZ = atan2(end.y-start.y, end.x-start.x)
-                if (self.thetaX != pi/2 and self.thetaX != -pi/2):
-                    self.length = sqrt((end.y-start.y)**2+(end.x-start.x)**2
-                                    )/cos(self.thetaX)
-                else:
-                    self.verticalBrick()
-            else:
-                thetaZ = 0
-                self.verticalBrick()
-            self.orientation = Orientation(latitudinalAngle, longitudinalAngle, thetaZ)
-            self.center = Position((start.x+end.x)/2,(start.y+end.y)/2,(start.z+end.z)/2)
-        else:
-            self.center = center
-            self.start = Position(center.x-self.LENGTH*cos(plannarAngle), 
-                                  center.y-self.LENGTH/2*sin(plannarAngle), center.z)
-            self.end = Position(center.x+self.LENGTH*cos(plannarAngle), 
-                                  center.y+self.LENGTH/2*sin(plannarAngle), center.z)
-            self.orientation = Orientation(latitudinalAngle, longitudinalAngle, plannarAngle)
+        self.center = center
+        self.start = Position(center.x-self.LENGTH*cos(plannarAngle), 
+                                center.y-self.LENGTH/2*sin(plannarAngle), center.z)
+        self.end = Position(center.x+self.LENGTH*cos(plannarAngle), 
+                                center.y+self.LENGTH/2*sin(plannarAngle), center.z)
+        self.orientation = Orientation(latitudinalAngle, longitudinalAngle, plannarAngle)
     def verticalBrick(self):
         self.length = 0
         print("Unexpected vertical brick")
     def __eq__(self, other):
         if isinstance(other, Brick):
-            return (self.center.x == other.center.x and self.center.y == other.center.y 
-                    and self.orientation.z == other.orientation.z)
+            return (isclose(self.center.x, other.center.x, rel_tol=1e-9) and 
+                    isclose(self.center.y, other.center.y, rel_tol=1e-9) and
+                    self.orientation.z == other.orientation.z)
         else:
             print("Brick::==() misused")
             sys.exit(1)
@@ -204,7 +193,7 @@ def inBoundaries(position):
     #     return False
     return True
 
-def move(position, orientation=None):
+def move(base, base_cyclic, position, orientation=None):
     if not(inBoundaries(position)):
         print("Attempt to exceed the robot limits:", position)
         sys.exit(1)
@@ -215,22 +204,24 @@ def move(position, orientation=None):
 
     if orientation==None:
         #keep current orientation
-        moveCarteresian(x, y, z)
+        example_cartesian_action_movement(base, base_cyclic, x, y, z)
     else:
         ox, oy, oz = orientation.x, orientation.y, orientation.z
         # ox, oy, oz = orientation.x*180/pi, orientation.y*180/pi, orientation.z*180/pi
-        moveCarteresian(x, y, z, ox, oy, oz)
+        example_cartesian_action_movement(base, base_cyclic, x, y, z, ox, oy, oz)
     # task 5
     # robothub code
     pass
 
-def moveBrick(gripper, moves):
-    catch(gripper, moves.start, moves.O0)
-    for j in range(1, len(moves.positions)):
-        move(moves.positions[j], moves.orientations[j])
+def moveBrick(gripper, base, base_cyclic, move_):
+    move(base, base_cyclic, move_.positions[0], move_.orientations[0])
+    catch(gripper, move_.start, move_.O0)
+    for j in range(1, len(move_.positions)):
+        move(base, base_cyclic, move_.positions[j], move_.orientations[j])
     release(gripper)
-    move(Position(moves[-1].end.x, moves[-1].end.y, moves[-1].end.z+2*Brick.THICKNESS),
-        Orientation(moves[-1].OEnd))
+    move(base, base_cyclic, Position(move_[-1].end.x, move_[-1].end.y, 
+                                     move_[-1].end.z+2*Brick.THICKNESS),
+        Orientation(move_[-1].OEnd))
 
 def brickPlaced(position, bricks):
     # task 3
@@ -273,7 +264,7 @@ def main():
     # Create connection to the device and get the router
     with utilities.DeviceConnection.createTcpConnection(args) as router:
         # Create required services
-        base = initBase(router)
+        base, base_cyclic = initBase(router)
         gripper = initGripper(router)
         print("Task 1: brick detection")
         bricks, rawData = brickDetection()
@@ -286,13 +277,21 @@ def main():
         for i in range(len(moves)):
             print(f"Move {i} starts : "+moves[i].display())
             if i==0: print("Task 4: New brick picking")
-            moveBrick(gripper, moves)
+            moveBrick(gripper, base, base_cyclic, moves[i])
             if i==0: print("Task 3: Feedback mapping")
             currentBricks = brickDetection()
             if not(brickPlaced(moves[i].start, currentBricks)):
                 print("Brick misplaced : push attempt coming")
                 misplacedBrick = findMisplaced(moves[i].start, currentBricks)
-                moveBrick(gripper, moves)
+                c1 = misplacedBrick.center
+                move = Move([c1, Position(c1.x, c1.y, c1.z+2*Brick.THICKNESS),
+                         moves[i].positions[2],
+                         moves[i].positions[3]],
+                        [Orientation(CATCH_o.x, CATCH_o.y, misplacedBrick.orientation.z),
+                         Orientation(CATCH_o.x, CATCH_o.y, misplacedBrick.orientation.z),
+                         moves[i].orientations[2],
+                         moves[i].orientations[3]])
+                moveBrick(gripper, base, base_cyclic, move)
                 # pushBrick(misplacedBrick, moves[i])
     print("Tasks completed !")
 

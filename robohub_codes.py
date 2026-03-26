@@ -4,13 +4,13 @@ import os
 import time
 import threading
 
-from kortex_api.autogen.client_stubs.BaseClientRpc import BaseClient
+from kortex_api.autogen.client_stubs.BaseClientRpc import BaseClient, BaseCyclicClient
 
 from kortex_api.autogen.messages import Base_pb2, BaseCyclic_pb2, Common_pb2
 from kortex_api.Exceptions.KServerException import KServerException
 
 def initBase(router):
-    return BaseClient(router)
+    return BaseClient(router), BaseCyclicClient(router)
 
 
 def example_forward_kinematics(base, angles):
@@ -309,31 +309,3 @@ def example_cartesian_action_movement(base, base_cyclic, x, y, z, ox, oy, oz):
     else:
         print("Timeout on action notification wait")
     return finished
-
-def moveCarteresian(x, y, z, ox=None, oy=None, oz=None):
-    
-    # Import the utilities helper module
-    sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
-    import utilities
-
-    # Parse arguments
-    args = utilities.parseConnectionArguments()
-    
-    # Create connection to the device and get the router
-    with utilities.DeviceConnection.createTcpConnection(args) as router:
-
-        # Create required services
-        base = BaseClient(router)
-        base_cyclic = BaseCyclicClient(router)
-
-        # Example core
-        success = True
-
-        # success &= example_move_to_home_position(base)
-        success &= example_cartesian_action_movement(base, base_cyclic, x, y, z, ox, oy, oz)
-        # success &= example_angular_action_movement(base)
-
-        # You can also refer to the 110-Waypoints examples if you want to execute
-        # a trajectory defined by a series of waypoints in joint space or in Cartesian space
-
-        return True if success else False
