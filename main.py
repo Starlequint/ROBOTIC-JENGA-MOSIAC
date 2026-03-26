@@ -215,7 +215,7 @@ def move(base, base_cyclic, position, orientation=None):
 
 def moveBrick(gripper, base, base_cyclic, move_):
     move(base, base_cyclic, move_.positions[0], move_.orientations[0])
-    catch(gripper, move_.start, move_.O0)
+    catch(gripper)
     for j in range(1, len(move_.positions)):
         move(base, base_cyclic, move_.positions[j], move_.orientations[j])
     release(gripper)

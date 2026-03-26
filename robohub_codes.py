@@ -271,7 +271,7 @@ def example_angular_action_movement(base):
     return finished
 
 
-def example_cartesian_action_movement(base, base_cyclic, x, y, z, ox, oy, oz):
+def example_cartesian_action_movement(base, base_cyclic, x=None, y=None, z=None, ox=None, oy=None, oz=None):
     
     print("Starting Cartesian action movement ...")
     action = Base_pb2.Action()
@@ -281,9 +281,12 @@ def example_cartesian_action_movement(base, base_cyclic, x, y, z, ox, oy, oz):
     feedback = base_cyclic.RefreshFeedback()
 
     cartesian_pose = action.reach_pose.target_pose
-    cartesian_pose.x = x # feedback.base.tool_pose_x          # (meters)
-    cartesian_pose.y = y # feedback.base.tool_pose_y - 0.1    # (meters)
-    cartesian_pose.z = z # feedback.base.tool_pose_z - 0.2    # (meters)
+    if  x == None:  cartesian_pose.x = feedback.base.tool_pose_x          # (meters)
+    else:          cartesian_pose.x = x # feedback.base.tool_pose_x          # (meters)
+    if  y == None:  cartesian_pose.y = feedback.base.tool_pose_y     # (meters)
+    else:          cartesian_pose.y = y # feedback.base.tool_pose_y - 0.1    # (meters)
+    if  z == None:  cartesian_pose.z = feedback.base.tool_pose_z    # (meters)
+    else:          cartesian_pose.z = z # feedback.base.tool_pose_z - 0.2    # (meters)
     if ox == None: cartesian_pose.theta_x = feedback.base.tool_pose_theta_x # (degrees)
     else:          cartesian_pose.theta_x = ox # feedback.base.tool_pose_theta_x # (degrees)
     if oy == None: cartesian_pose.theta_y = feedback.base.tool_pose_theta_y # (degrees)
