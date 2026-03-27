@@ -203,6 +203,9 @@ def inBoundaries(position):
     #TODO: complete with the computer limit, and take account of the robot robot orientation
     if (position.z < 0 or position.norm() < 20 or 902.0 < position.norm()):
         return False
+    #simplification: x and y limits of the table
+    if (position.x < 10 or 80 < position.x or position.y < -80 or 20 < position.y):
+        return False
     return True
 
 x0, y0, z0, ox0, oy0, oz0 = 0, 0, 0, 0, 0, 0
