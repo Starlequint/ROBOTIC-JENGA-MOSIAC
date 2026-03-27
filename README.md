@@ -1,5 +1,5 @@
 # ROBOTIC-JENGA-MOSIAC
-Implementation of gen 3 (kinova) motion to pick and place jenga from a random state into a mosaic
+Implementation of Gen 3 (kinova) motion to pick and place jenga planks to extend a given, pre-determined pattern.
 
 User guide: https://www.kinovarobotics.com/product/gen3-robots#Product__resources
 
