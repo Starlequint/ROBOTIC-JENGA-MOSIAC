@@ -4,6 +4,7 @@ from TriangleTessellation import patternRecognition
 from getImage import get_single_frame
 from robohub_codes import (initBase, example_forward_kinematics, example_inverse_kinematics, 
                            GripperCommandExample, example_cartesian_action_movement)
+from move_angular_and_cartesian import mv
 import cv2
 from numpy import zeros_like
 from typing import Final
@@ -11,6 +12,7 @@ import argparse
 import utilities
 import sys
 import os
+import matplotlib.pyplot as plt
 
 class Position:
     def __init__(self, x, y, z):
@@ -105,14 +107,19 @@ class Move:
 IMG_WIDTH  = 1280 # pixels
 IMG_HEIGHT = 720 # pixels
 HOME = Position(30, -15, 40) # cm
-IMG_OFFSET = Position(-150-516.3, 300-292.11, 0) # mm
-GROUND = Position(None, None, 0)
-CATCH_o = (180, 0, None) # °
+HOME_o = Orientation(180, 0, 0)
+IMG_OFFSET = Position(57.7, 15.23, 0) # mm
+SCALE = -0.0439
+GROUND = Position(None, None, 1) # cm
+CATCH_o = Orientation(180, 0, None) # °
 threshold = 1 #TODO: define the threshold for a well placed brick
-GRIPPER_WIDTH = 5 # cm
+GRIPPER_WIDTH = 10 # cm
 
-def getImage():
-    move(HOME)
+def coordConv(x, y):
+    return y*SCALE+IMG_OFFSET.x, x*SCALE+IMG_OFFSET.y
+
+def getImage(base, base_cyclic):
+    move(base, base_cyclic, HOME, HOME_o, True)
     rtsp_url = "rtsp://admin:admin@192.168.1.10/color"
     frame_array = get_single_frame(rtsp_url)
     frame_depth_normalized = zeros_like(frame_array)
@@ -125,9 +132,10 @@ def save(image, imagePath):
     #code written the March 15
     cv2.imwrite(imagePath,image)
 
-def brickDetection():
+def brickDetection():#base, base_cyclic):
     # task 1
-    rawImage, colourImage = getImage()
+    base, base_cyclic = None, None
+    rawImage, colourImage = getImage(base, base_cyclic)
     rawImagePath, colourImagePath = 'rawImage.png', 'ColourImage.png'
     save(rawImage, rawImagePath)
     save(colourImage, colourImagePath)
@@ -141,8 +149,7 @@ def brickDetection():
     bricks = [0]*len(results)
     for i in range(len(results)):
         # convertion to cm
-        x = (results[i][1]+IMG_OFFSET.y)*103.269/IMG_WIDTH
-        y = (results[i][0]+IMG_OFFSET.x)*58.422/IMG_HEIGHT
+        x, y = coordConv(results[i][0], results[i][1])
         bricks[i] = Brick(center=Position(x, y, GROUND.z+Brick.THICKNESS/2), 
                           plannarAngle=results[i][2])
     return bricks, results
@@ -153,17 +160,18 @@ def recognizePattern(rawData, bricks0):
     for i in range(len(triangleGroupedData)):
         for j in range(len(triangleGroupedData[i])):
             # convertion to cm
-            x = (triangleGroupedData[i][j][1]+IMG_OFFSET.y)*103.269/IMG_WIDTH
-            y = (triangleGroupedData[i][j][0]+IMG_OFFSET.x)*58.422/IMG_HEIGHT
-            bricks.append(Brick(center=Position(x, y, -HOME.z), 
+            x, y = coordConv(results[i][0], results[i][1])
+            bricks.append(Brick(center=Position(x, y, GROUND.z+Brick.THICKNESS/2), 
                 plannarAngle=triangleGroupedData[i][j][2]))
+    plt.scatter([bricks[0].center.y, bricks[1].center.y, bricks[2].center.y], [bricks[0].center.x, bricks[1].center.x, bricks[2].center.x], color='r')
+    plt.show()
     moves = [None]*min(len(bricks0), len(bricks))
     iUsed = [len(bricks0)]*min(len(bricks0), len(bricks))
     for j in range(min(len(bricks0), len(bricks))):
         iClosest = 0
         for i in range(1, len(bricks0)):
             if (not(bricks0[i] in [bricks[0], bricks[1], bricks[2]])):
-                if (i not in iUsed and bricks[j].distance2d(bricks0[i]) < bricks[j].distance2d(bricks0[iClosest])):
+                if (i not in iUsed and bricks[j].center.distance2d(bricks0[i].center) < bricks[j].center.distance2d(bricks0[iClosest].center)):
                     iClosest = i
             else: 
                 print("model brick: ", bricks0[i])
@@ -197,34 +205,36 @@ def inBoundaries(position):
     #     return False
     return True
 
-def move(base, base_cyclic, position, orientation=None):
+def move(base, base_cyclic, position, orientation=None, firstCall=False):
     if not(inBoundaries(position)):
         print("Attempt to exceed the robot limits:", position)
         sys.exit(1)
     #convert position in meter and orientation in degree (already done for orientations)
     print("Before conversion:", position.x, position.y, position.z)
     x, y, z = position.x/100, position.y/100, position.z/100
-    print("After conversion:", position.x, position.y, position.z)
+    print("After conversion:", x, y, z)
 
-    if orientation==None:
+    #if orientation==None:
         #keep current orientation
-        example_cartesian_action_movement(base, base_cyclic, x, y, z)
-    else:
-        ox, oy, oz = orientation.x, orientation.y, orientation.z
+        #example_cartesian_action_movement(base, base_cyclic, x, y, z)
+    #else:
+        #ox, oy, oz = orientation.x, orientation.y, orientation.z
         # ox, oy, oz = orientation.x*180/pi, orientation.y*180/pi, orientation.z*180/pi
-        example_cartesian_action_movement(base, base_cyclic, x, y, z, ox, oy, oz)
+        #example_cartesian_action_movement(base, base_cyclic, x, y, z, ox, oy, oz)
+    #mv(-0.28,-0.15,0.02,90,0,0,True)
+    mv(x-0.58,y,z-0.42,90,0,orientation.z,True,firstCall)
     # task 5
     # robothub code
     pass
 
 def moveBrick(gripper, base, base_cyclic, move_):
-    move(base, base_cyclic, move_.positions[0], move_.orientations[0])
-    catch(gripper)
+    move(base, base_cyclic, move_.positions[0], move_.orientations[0], False)
+    #catch(gripper)
     for j in range(1, len(move_.positions)):
-        move(base, base_cyclic, move_.positions[j], move_.orientations[j])
-    release(gripper)
-    move(base, base_cyclic, Position(move_[-1].end.x, move_[-1].end.y, 
-                                     move_[-1].end.z+2*Brick.THICKNESS),
+        move(base, base_cyclic, move_.positions[j], move_.orientations[j], False)
+    #release(gripper)
+    move(base, base_cyclic, Position(move_.end.x, move_[-1].end.y, 
+                                     move_.end.z+2*Brick.THICKNESS, False),
         Orientation(move_[-1].OEnd))
 
 def brickPlaced(position, bricks):
@@ -281,44 +291,57 @@ def InverseKinematics(base, position, orientation):
                                       orientation.x, orientation.y, orientation.z)        
 
 def main():
-    sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
-    # Parse arguments
-    parser = argparse.ArgumentParser()
-    args = utilities.parseConnectionArguments(parser)
-    
-    # Create connection to the device and get the router
-    with utilities.DeviceConnection.createTcpConnection(args) as router:
-        # Create required services
-        base, base_cyclic = initBase(router)
-        gripper = initGripper(router)
-        print("Task 1: brick detection")
-        bricks, rawData = brickDetection()
-        print(f"Task 2: pattern recognition & prediction: on {len(bricks)} bricks found")
-        moves, movedBricks = recognizePattern(rawData, bricks)
-        if (len(moves) != len(movedBricks)): 
-            print("Incoherent outputs from the pattern recognition")
-            sys.exit(1)
-        print(f"Task 5 : robot arm movement: {len(moves)} moves are coming.")
-        for i in range(len(moves)):
-            print(f"Move {i} starts : "+moves[i].display())
-            if i==0: print("Task 4: New brick picking")
-            moveBrick(gripper, base, base_cyclic, moves[i])
-            if i==0: print("Task 3: Feedback mapping")
-            currentBricks = brickDetection()
-            if not(brickPlaced(moves[i].start, currentBricks)):
-                print("Brick misplaced : push attempt coming")
-                misplacedBrick = findMisplaced(moves[i].start, currentBricks)
-                c1 = misplacedBrick.center
-                move = Move([c1, Position(c1.x, c1.y, c1.z+2*Brick.THICKNESS),
-                         moves[i].positions[2],
-                         moves[i].positions[3]],
-                        [Orientation(CATCH_o.x, CATCH_o.y, misplacedBrick.orientation.z),
-                         Orientation(CATCH_o.x, CATCH_o.y, misplacedBrick.orientation.z),
-                         moves[i].orientations[2],
-                         moves[i].orientations[3]])
-                moveBrick(gripper, base, base_cyclic, move)
-                # pushBrick(misplacedBrick, moves[i])
-    print("Tasks completed !")
+	
+	sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
+	# Parse arguments
+	parser = argparse.ArgumentParser()
+	args = utilities.parseConnectionArguments(parser)
+
+	# Create connection to the device and get the router
+	with utilities.DeviceConnection.createTcpConnection(args) as router:
+	    base, base_cyclic = initBase(router)
+	    gripper = initGripper(router)
+	    #base, base_cyclic = None, None
+	    print("Task 1: brick detection")
+	    bricks, rawData = brickDetection()#base, base_cyclic)
+	    print('u', rawData[0][0], 'v', rawData[0][1]) 
+	    move(base, base_cyclic, bricks[0].center, Orientation(CATCH_o.x, CATCH_o.y, bricks[0].orientation.z), firstCall=False)
+	    '''
+	    print(f"Task 2: pattern recognition & prediction: on {len(bricks)} bricks found")
+	    moves, movedBricks = recognizePattern(rawData, bricks)
+	    #if (len(moves) != len(movedBricks)): 
+	    #    print("Incoherent outputs from the pattern recognition")
+	    #    sys.exit(1)
+	    x, y = [] ,  []
+	    for move in moves:
+	        x.append(move.start.x)
+	        y.append(move.start.y)
+	    
+	    plt.scatter(y, x )
+	    plt.scatter([bricks[0].center.y, bricks[1].center.y, bricks[2].center.y], [bricks[0].center.x, bricks[1].center.x, bricks[2].center.x], color='r')
+	    plt.show()
+	    print(f"Task 5 : robot arm movement: {len(moves)} moves are coming.")
+	    for i in range(len(moves)):
+	        print(f"Move {i} starts : "+moves[i].display())
+	        if i==0: print("Task 4: New brick picking")
+	        moveBrick(gripper, base, base_cyclic, moves[i])
+	        if i==0: print("Task 3: Feedback mapping")
+	        currentBricks = brickDetection()
+	        if not(brickPlaced(moves[i].start, currentBricks)):
+		        print("Brick misplaced : push attempt coming")
+		        misplacedBrick = findMisplaced(moves[i].start, currentBricks)
+		        c1 = misplacedBrick.center
+		        move = Move([c1, Position(c1.x, c1.y, c1.z+2*Brick.THICKNESS),
+			         moves[i].positions[2],
+			         moves[i].positions[3]],
+			        [Orientation(CATCH_o.x, CATCH_o.y, misplacedBrick.orientation.z),
+			         Orientation(CATCH_o.x, CATCH_o.y, misplacedBrick.orientation.z),
+			         moves[i].orientations[2],
+			         moves[i].orientations[3]])
+			    #moveBrick(gripper, base, base_cyclic, move)
+		    #pushBrick(misplacedBrick, moves[i])
+		    '''
+	    print("Tasks completed !")
 
 if __name__ == '__main__':
     main()
