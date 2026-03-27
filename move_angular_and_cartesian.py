@@ -151,9 +151,9 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 import utilities
 
 # Parse arguments
-args = utilities.parseConnectionArguments()
+#args = utilities.parseConnectionArguments()
 
-def mv(x, y, z, ox, oy, oz, home, firstCall):
+def mv(args, x, y, z, ox, oy, oz, home):
     
 	# Import the utilities helper module
 		

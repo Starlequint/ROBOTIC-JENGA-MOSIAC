@@ -290,21 +290,16 @@ def example_cartesian_action_movement(base, base_cyclic, x=None, y=None, z=None,
 
     cartesian_pose = action.reach_pose.target_pose
     if  x == None:  cartesian_pose.x = feedback.base.tool_pose_x          # (meters)
-    #else:          cartesian_pose.x = x # feedback.base.tool_pose_x          # (meters)
     else:          cartesian_pose.x =  feedback.base.tool_pose_x -x-x0         # (meters)
     if  y == None:  cartesian_pose.y = feedback.base.tool_pose_y     # (meters)
     else:          cartesian_pose.y = feedback.base.tool_pose_y - y - y0    # (meters)
     if  z == None:  cartesian_pose.z = feedback.base.tool_pose_z    # (meters)
-    #else:          cartesian_pose.z = z # feedback.base.tool_pose_z - 0.2    # (meters)
     else:          cartesian_pose.z =  feedback.base.tool_pose_z - z  -z0  # (meters)
-    if ox == None: cartesian_pose.theta_x = feedback.base.tool_pose_theta_x # (degrees)
-    #else:          cartesian_pose.theta_x = ox # feedback.base.tool_pose_theta_x # (degrees)
+    if ox == None: cartesian_pose.theta_x = feedback.base.tool_pose_theta_x # (degrees
     else:          cartesian_pose.theta_x = feedback.base.tool_pose_theta_x -ox-ox0# (degrees)
     if oy == None: cartesian_pose.theta_y = feedback.base.tool_pose_theta_y # (degrees)
-    #else:          cartesian_pose.theta_y = oy # feedback.base.tool_pose_theta_y # (degrees)
     else:          cartesian_pose.theta_y = feedback.base.tool_pose_theta_y -oy-oy0# (degrees)
     if oz == None: cartesian_pose.theta_z = feedback.base.tool_pose_theta_z # (degrees)
-    #else:          cartesian_pose.theta_z = oz # feedback.base.tool_pose_theta_z # (degrees)
     else:          cartesian_pose.theta_z = feedback.base.tool_pose_theta_z -oz-oz0# (degrees)
 
     e = threading.Event()
