@@ -205,7 +205,9 @@ def inBoundaries(position):
     #     return False
     return True
 
+x0, y0, z0, ox0, oy0, oz0 = 0, 0, 0, 0, 0, 0
 def move(base, base_cyclic, position, orientation=None, firstCall=False):
+    global x0, y0, z0, ox0, oy0, oz0
     if not(inBoundaries(position)):
         print("Attempt to exceed the robot limits:", position)
         sys.exit(1)
@@ -222,7 +224,9 @@ def move(base, base_cyclic, position, orientation=None, firstCall=False):
         # ox, oy, oz = orientation.x*180/pi, orientation.y*180/pi, orientation.z*180/pi
         #example_cartesian_action_movement(base, base_cyclic, x, y, z, ox, oy, oz)
     #mv(-0.28,-0.15,0.02,90,0,0,True)
-    mv(x-0.58,y,z-0.42,90,0,orientation.z,True,firstCall)
+    if firstCall:        mv(x-0.58,y,z-0.42,90,0,orientation.z,True,firstCall)
+    else:                mv(x-x0,y-y0,z-z0,orientation.x-ox0,0,orientation.z,True,firstCall)
+    x0, y0, z0, ox0, oy0, oz0 = x, y, z, orientation.x, 0, orientation.z
     # task 5
     # robothub code
     pass
