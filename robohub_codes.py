@@ -123,25 +123,19 @@ class GripperCommandExample:
             position += 0.1
             time.sleep(1)
     def open(self):
+        # Create the GripperCommand we will send
         gripper_command = Base_pb2.GripperCommand()
         finger = gripper_command.gripper.finger.add()
-        # Set speed to open gripper
-        print ("Opening gripper using speed command...")
-        gripper_command.mode = Base_pb2.GRIPPER_SPEED
-        finger.value = 0.1
-        self.base.SendGripperCommand(gripper_command)
-        gripper_request = Base_pb2.GripperRequest()
 
-        # Wait for reported position to be opened
-        gripper_request.mode = Base_pb2.GRIPPER_POSITION
-        while True:
-            gripper_measure = self.base.GetMeasuredGripperMovement(gripper_request)
-            if len (gripper_measure.finger):
-                print("Current position is : {0}".format(gripper_measure.finger[0].value))
-                if gripper_measure.finger[0].value < 0.01:
-                    break
-            else: # Else, no finger present in answer, end loop
-                break
+        # Close the gripper with position increments
+        print("Performing gripper test in position...")
+        gripper_command.mode = Base_pb2.GRIPPER_POSITION
+        position = 0.00
+        finger.finger_identifier = 1
+        finger.value = position
+        print("Going to position {:0.2f}...".format(finger.value))
+        self.base.SendGripperCommand(gripper_command)
+        time.sleep(1)
     def speedMove(self, speed=-0.1):
         gripper_command = Base_pb2.GripperCommand()
         finger = gripper_command.gripper.finger.add()

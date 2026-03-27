@@ -109,15 +109,15 @@ HOME = Position(58, 0, 42) # cm
 HOME_o = Orientation(90, 0, 0) # °
 CAMERA = Position(30, -15, 40) # cm
 CAMERA_o = Orientation(180, 0, 0) # °
-IMG_OFFSET = Position(57.7, 15.23, 0) # mm
-SCALE = -0.0439
-GROUND = Position(None, None, 1) # cm
+IMG_OFFSET = Position(48, 14, 0)#Position(48, 13.5, 0) #Position(57.7, 15.23, 0) # mm #41.15455475616455 1.0362999298095694 1.7
+SCALE = -0.041
+GROUND = Position(None, None, 2) # cm
 CATCH_o = Orientation(180, 0, None) # °
 threshold = 1 #TODO: define the threshold for a well placed brick
 GRIPPER_WIDTH = 10 # cm
 
 def coordConv(x, y, t):
-    return y*SCALE+IMG_OFFSET.x, x*SCALE+IMG_OFFSET.y, pi-t
+    return y*SCALE+IMG_OFFSET.x, x*SCALE+IMG_OFFSET.y, 90-t
 
 def getImage(args):
     move(args, CAMERA, CAMERA_o, True)
@@ -291,6 +291,12 @@ def InverseKinematics(base, position, orientation):
 def main():
     sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
     # Parse arguments
+    
+    parser = argparse.ArgumentParser()
+    args = utilities.parseConnectionArguments(parser)
+    with utilities.DeviceConnection.createTcpConnection(args) as router:
+        gripper = initGripper(router)
+        release(gripper)
     parser = argparse.ArgumentParser()
     args = utilities.parseConnectionArguments(parser)
 
@@ -302,6 +308,18 @@ def main():
         bricks, rawData = brickDetection(args)
         print('u', rawData[0][0], 'v', rawData[0][1]) 
         move(args, bricks[0].center, Orientation(CATCH_o.x, CATCH_o.y, bricks[0].orientation.z), firstCall=False)
+        catch(gripper)
+    sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
+    # Parse arguments
+    parser = argparse.ArgumentParser()
+    args = utilities.parseConnectionArguments(parser)
+    with utilities.DeviceConnection.createTcpConnection(args) as router:
+        gripper = initGripper(router)
+        move(args, Position(bricks[0].center.x, bricks[0].center.y, bricks[0].center.z+2*Brick.THICKNESS), 
+            Orientation(CATCH_o.x, CATCH_o.y, bricks[0].orientation.z), firstCall=False)
+        move(args, Position(bricks[1].center.x, bricks[1].center.y, bricks[1].center.z+2*Brick.THICKNESS), 
+		    Orientation(CATCH_o.x, CATCH_o.y, bricks[1].orientation.z), firstCall=False)
+        release(gripper)
         '''
         print(f"Task 2: pattern recognition & prediction: on {len(bricks)} bricks found")
         moves, movedBricks = recognizePattern(rawData, bricks)
