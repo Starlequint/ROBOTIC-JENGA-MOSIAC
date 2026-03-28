@@ -165,10 +165,10 @@ def mv(args, x, y, z, ox, oy, oz, home):
 		base_cyclic = BaseCyclicClient(router)
 
 		# Example core
-		success = True
-
+		success, l = True, 10 if home else 1
+        
 		if (home): success &= example_move_to_home_position(base)
-		l = 10
+		
 		for i in range(l):
 			success &= example_cartesian_action_movement(base, base_cyclic, x/l, y/l, z/l, ox/l, oy/l, oz/l)
 		#success &= example_angular_action_movement(base)
