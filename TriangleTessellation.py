@@ -18,7 +18,7 @@ def is_plausible_triangle(p1, p2, p3, tol=0.15):
     ratios = triangle_aspect(p1, p2, p3)
     return np.allclose(ratios, [1.0, 1.0, 1.0], atol=tol)
 
-def is_valid_size(p1, p2, p3, expected_size=182, tol=10):
+def is_valid_size(p1, p2, p3, expected_size=182, tol=0.1):
     #Checks if the average side length of the triangle is close to the expected size.
     sides = [
         np.linalg.norm(p2[:2] - p1[:2]),
