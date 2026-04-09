@@ -1,9 +1,9 @@
-from math import atan2, sqrt, cos, sin, pi, isclose
-from JENGA_detection import detect_planks
+from math import sqrt, cos, sin, isclose
+from JENGA_detection_v5 import detect_planks
 from TriangleTessellation import patternRecognition
 from getImage import get_single_frame
-from robohub_codes import (initBase, example_forward_kinematics, example_inverse_kinematics, 
-                           GripperCommandExample, example_cartesian_action_movement)
+from robohub_codes import (example_forward_kinematics, example_inverse_kinematics, 
+                           GripperCommandExample)
 from move_angular_and_cartesian import mv
 import cv2
 from numpy import zeros_like
@@ -12,7 +12,6 @@ import argparse
 import utilities
 import sys
 import os
-import matplotlib.pyplot as plt
 
 class Position:
     def __init__(self, x, y, z):
@@ -61,29 +60,29 @@ class Orientation:
             print("Orientation::distance() misused")
             sys.exit(1)
 
-class Brick:
+class Plank:
     LENGTH   : Final[float] = 7.4 # cm
     WIDTH    : Final[float] = 2.4 # cm
     THICKNESS: Final[float] = 1.4 # cm
     def __init__(self, center=0, latitudinalAngle=0, 
                  longitudinalAngle=0, plannarAngle=0):
-        """orientation: y is along the brick, z on the big side, x is on the small side"""
+        """orientation: y is along the plank, z on the big side, x is on the small side"""
         self.center = center
         self.start = Position(center.x-self.LENGTH*cos(plannarAngle), 
                                 center.y-self.LENGTH/2*sin(plannarAngle), center.z)
         self.end = Position(center.x+self.LENGTH*cos(plannarAngle), 
                                 center.y+self.LENGTH/2*sin(plannarAngle), center.z)
         self.orientation = Orientation(latitudinalAngle, longitudinalAngle, plannarAngle)
-    def verticalBrick(self):
+    def verticalPlank(self):
         self.length = 0
-        print("Unexpected vertical brick")
+        print("Unexpected vertical plank")
     def __eq__(self, other):
-        if isinstance(other, Brick):
+        if isinstance(other, Plank):
             return (isclose(self.center.x, other.center.x, rel_tol=1e-2) and 
                     isclose(self.center.y, other.center.y, rel_tol=1e-2) and
                     isclose(self.orientation.z, other.orientation.z, rel_tol=5))
         else:
-            print("Brick::==() misused")
+            print("Plank::==() misused")
             sys.exit(1)
             
 class Move:
@@ -109,11 +108,11 @@ HOME = Position(58, 0, 42) # cm
 HOME_o = Orientation(90, 0, 0) # °
 CAMERA = Position(30, -15, 40) # cm
 CAMERA_o = Orientation(180, 0, 0) # °
-IMG_OFFSET = Position(48, 14, 0)#Position(48, 13.5, 0) #Position(57.7, 15.23, 0) # mm #41.15455475616455 1.0362999298095694 1.7
+IMG_OFFSET = Position(48, 14, 0) # mm
 SCALE = -0.041
 GROUND = Position(None, None, 2) # cm
 CATCH_o = Orientation(180, 0, None) # °
-threshold = 1 #TODO: define the threshold for a well placed brick
+threshold = 1 #TODO: define the threshold for a well placed plank
 GRIPPER_WIDTH = 12 # cm
 CX_MIN, CX_MAX, CY_MIN, CY_MAX = -100, 1380, 180, 820
 
@@ -143,7 +142,7 @@ def save(image, imagePath):
     else:       print(f"Failed to save image at: {new_path}")
     return new_path
 
-def brickDetection():
+def plankDetection():
     # task 1
     rawImage, colourImage = getImage()
     rawImagePath, colourImagePath = 'rawImage.png', 'ColourImage.png'
@@ -157,43 +156,52 @@ def brickDetection():
         show=False
     )
     #results : list of (cx, cy, angle) tuples
-    bricks = [0]*len(results)
+    planks = [0]*len(results)
     for i in range(len(results)):
         # convertion to cm
-        # if (results[i][2] > 90): results[i] = (results[i][0], results[i][1], results[i][2]-180)
         x, y, t = coordConv(results[i][0], results[i][1], results[i][2])
-        bricks[i] = Brick(center=Position(x, y, GROUND.z+Brick.THICKNESS/2), 
+        planks[i] = Plank(center=Position(x, y, GROUND.z+Plank.THICKNESS/2), 
                           plannarAngle=t)
-    return bricks, results
+    return planks, results
 
-def recognizePattern(rawData, bricks0):
+def recognizePattern(rawData, planks0):
     triangleGroupedData = patternRecognition(rawData) #none redondant list of triangles
-    bricks = []
+    planks = []
     print(f"Patterned {len(triangleGroupedData*3)} planks")
     for i in range(len(triangleGroupedData)):
         for j in range(len(triangleGroupedData[i])):
-            	cx, cy, t = triangleGroupedData[i][j][0], triangleGroupedData[i][j][1], triangleGroupedData[i][j][2]
+            cx, cy = triangleGroupedData[i][j][0], triangleGroupedData[i][j][1]
+            t = triangleGroupedData[i][j][2]
             	#if (CX_MIN < cx < CX_MAX and CY_MIN < cy < CY_MAX):
-            	x, y, t= coordConv(cx, cy, t)
-            	bricks.append(Brick(center=Position(x, y, GROUND.z+Brick.THICKNESS/2), plannarAngle=t))
-            	print(f"  Plank {i+1:>2}: cx={cx:>6.1f}  cy={cy:>6.1f}"+f"  angle={t:>7.2f}°")
-    print(f"Patterned and in screen {len(bricks)} planks")
+            x, y, t= coordConv(cx, cy, t)
+            planks.append(Plank(center=Position(x, y, GROUND.z+Plank.THICKNESS/2), plannarAngle=t))
+            print(f"  Plank {i+1:>2}: cx={cx:>6.1f}  cy={cy:>6.1f}"+f"  angle={t:>7.2f}°")
+    print(f"Patterned and in screen {len(planks)} planks")
     moves = []
     iUsed = []
-    print(min(len(bricks0), len(bricks))-3, "bricks to match")
-    for j in range(3, min(len(bricks0), len(bricks))):
+    print(min(len(planks0), len(planks))-3, "planks to match")
+    for j in range(3, min(len(planks0), len(planks))):
         iClosest = 0
-        while iClosest in iUsed or not(bricks0[iClosest] != bricks[0] and bricks0[iClosest] != bricks[1] and bricks0[iClosest] != bricks[2]): iClosest +=1
-        for i in range(iClosest+1, len(bricks0)):
-            if (bricks0[i] != bricks[0] and bricks0[i] != bricks[1] and bricks0[i] != bricks[2]):
-                if (i not in iUsed and bricks[j].center.distance2d(bricks0[i].center) < bricks[j].center.distance2d(bricks0[iClosest].center)):
+        while iClosest in iUsed or not(planks0[iClosest] != planks[0] and 
+            planks0[iClosest] != planks[1] and planks0[iClosest] != planks[2]): 
+            iClosest +=1
+        for i in range(iClosest+1, len(planks0)):
+            if (planks0[i] != planks[0] and planks0[i] != planks[1] and planks0[i] != planks[2]):
+                if (i not in iUsed and planks[j].center.distance2d(planks0[i].center) 
+                    < planks[j].center.distance2d(planks0[iClosest].center)):
                     iClosest = i
             else: 
-                print("model brick: ", bricks0[i])
+                print("model plank: ", planks0[i])
         iUsed.append(iClosest)
-        c1, c2 = bricks0[iClosest].center, bricks[j].center
-        moves.append(Move([c1, Position(c1.x, c1.y, c1.z+2*Brick.THICKNESS), Position(c2.x, c2.y, c2.z+2*Brick.THICKNESS), Position(c2.x, c2.y, c2.z+0.5*Brick.THICKNESS)], [Orientation(CATCH_o.x, CATCH_o.y, bricks0[iClosest].orientation.z), Orientation(CATCH_o.x, CATCH_o.y, bricks0[iClosest].orientation.z), Orientation(CATCH_o.x, CATCH_o.y, bricks[j].orientation.z), Orientation(CATCH_o.x, CATCH_o.y, bricks[j].orientation.z)]))
-    return moves, bricks
+        c1, c2 = planks0[iClosest].center, planks[j].center
+        moves.append(Move([c1, Position(c1.x, c1.y, c1.z+2*Plank.THICKNESS), 
+                           Position(c2.x, c2.y, c2.z+2*Plank.THICKNESS), 
+                           Position(c2.x, c2.y, c2.z+0.5*Plank.THICKNESS)], 
+                [Orientation(CATCH_o.x, CATCH_o.y, planks0[iClosest].orientation.z), 
+                 Orientation(CATCH_o.x, CATCH_o.y, planks0[iClosest].orientation.z), 
+                 Orientation(CATCH_o.x, CATCH_o.y, planks[j].orientation.z), 
+                 Orientation(CATCH_o.x, CATCH_o.y, planks[j].orientation.z)]))
+    return moves, planks
 
 def initGripper(router):
     return GripperCommandExample(router)
@@ -206,7 +214,7 @@ def catch():
     args = utilities.parseConnectionArguments(parser)
     with utilities.DeviceConnection.createTcpConnection(args) as router:
         gripper = initGripper(router)
-        gripper.close(1-Brick.WIDTH/GRIPPER_WIDTH)
+        gripper.close(1-Plank.WIDTH/GRIPPER_WIDTH)
 
 def release():
     parser = argparse.ArgumentParser()
@@ -244,51 +252,50 @@ def move(position, orientation=None, firstCall=False):
                      orientation.x-ox0     , 0, orientation.z-oz0     , firstCall)
     x0, y0, z0, ox0, oy0, oz0 = x, y, z, orientation.x, 0, orientation.z
 
-def moveBrick(move_):
+def movePlank(move_):
     move(move_.positions[0], move_.orientations[0], False)
     catch()
     for j in range(1, len(move_.positions)):
         move(move_.positions[j], move_.orientations[j], False)
     release()
-    move(Position(move_.end.x, move_.end.y, move_.end.z+2*Brick.THICKNESS), 
+    move(Position(move_.end.x, move_.end.y, move_.end.z+2*Plank.THICKNESS), 
     			move_.orientations[-1], False)
 
-def brickPlaced(position, bricks):
+def plankPlaced(position, planks):
     # task 3
-    for brick in bricks:
-        if brick.center.distance2d(position) < threshold:
+    for plank in planks:
+        if plank.center.distance2d(position) < threshold:
             return True
     return False
 
-def findMisplaced(position, bricks):
+def findMisplaced(position, planks):
     # task 3
-    iMin, minDistance = 0, bricks[0].distance2d(position)
-    for i in range(1, len(bricks)):
-        distance = bricks[i].distance2d(position)
+    iMin, minDistance = 0, planks[0].distance2d(position)
+    for i in range(1, len(planks)):
+        distance = planks[i].distance2d(position)
         if distance < minDistance:
             iMin = i
             minDistance = distance
-    return bricks[iMin]
+    return planks[iMin]
 
-def pushBrick(brick, expectedMove):
+def pushPlank(plank, expectedMove):
     # task 5
-    #approach the brick and push it towards the expected location
+    #approach the plank and push it towards the expected location
 
-    APPROACH_Z = 2*Brick.THICKNESS
-    PUSH_Z = Brick.THICKNESS
+    APPROACH_Z = 2*Plank.THICKNESS
+    PUSH_Z = Plank.THICKNESS
 
     target = expectedMove.end
-    yaw = brick.orientation.z
+    yaw = plank.orientation.z
     push_orientation = Orientation(CATCH_o.x, CATCH_o.y, yaw)
     end_orientation = Orientation(CATCH_o.x, CATCH_o.y, expectedMove.OEnd)
 
-    above_start = Position(brick.center.x, brick.center.y, brick.center.z + APPROACH_Z)
-    contact_start = Position(brick.center.x, brick.center.y, brick.center.z + PUSH_Z)
-    contact_end = Position(target.x, target.y, brick.center.z + PUSH_Z)
-    above_end = Position(target.x, target.y, brick.center.z + APPROACH_Z)
+    above_start = Position(plank.center.x, plank.center.y, plank.center.z + APPROACH_Z)
+    contact_start = Position(plank.center.x, plank.center.y, plank.center.z + PUSH_Z)
+    contact_end = Position(target.x, target.y, plank.center.z + PUSH_Z)
+    above_end = Position(target.x, target.y, plank.center.z + APPROACH_Z)
 
     # Keep gripper open for a push correction
-    # send_gripper(0.0)
 
     move(above_start,   push_orientation, False)
     move(contact_start, push_orientation, False)
@@ -309,21 +316,11 @@ def InverseKinematics(base, position, orientation):
 def main():
     sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
     release()
-    print("Task 1: brick detection")
-    bricks, rawData = brickDetection()
-    print('u', rawData[0][0], 'v', rawData[0][1]) 
-    # move(args, bricks[0].center, Orientation(CATCH_o.x, CATCH_o.y, bricks[0].orientation.z), firstCall=False)
-    # catch()
-    # move(Position(bricks[0].center.x, bricks[0].center.y, bricks[0].center.z+2*Brick.THICKNESS), 
-    #     Orientation(CATCH_o.x, CATCH_o.y, bricks[0].orientation.z), firstCall=False)
-    # move(Position(bricks[1].center.x, bricks[1].center.y, bricks[1].center.z+2*Brick.THICKNESS), 
-    #     Orientation(CATCH_o.x, CATCH_o.y, bricks[1].orientation.z), firstCall=False)
-    # release()
-    print(f"Task 2: pattern recognition & prediction: on {len(bricks)} bricks found")
-    moves, movedBricks = recognizePattern(rawData, bricks)
-    #if (len(moves) != len(movedBricks)): 
-    #    print("Incoherent outputs from the pattern recognition")
-    #    sys.exit(1)
+    print("Task 1: plank detection")
+    planks, rawData = plankDetection()
+    print('u', rawData[0][0], 'v', rawData[0][1])
+    print(f"Task 2: pattern recognition & prediction: on {len(planks)} planks found")
+    moves, movedPlanks = recognizePattern(rawData, planks)
     x, y = [] ,  []
     for move in moves:
         x.append(move.start.x)
@@ -332,23 +329,23 @@ def main():
     print(f"Task 5 : robot arm movement: {len(moves)} moves are coming.")
     for i in range(len(moves)):
         print(f"Move {i} starts : "+moves[i].display())
-        if i==0: print("Task 4: New brick picking")
-        moveBrick(moves[i])
+        if i==0: print("Task 4: New plank picking")
+        movePlank(moves[i])
         if i==0: print("Task 3: Feedback mapping")
-        #currentBricks = brickDetection()
-        '''if not(brickPlaced(moves[i].start, currentBricks)):
-            print("Brick misplaced : push attempt coming")
-            misplacedBrick = findMisplaced(moves[i].start, currentBricks)
-            c1 = misplacedBrick.center
-            move = Move([c1, Position(c1.x, c1.y, c1.z+2*Brick.THICKNESS),
+        #currentPlanks = plankDetection()
+        '''if not(plankPlaced(moves[i].start, currentPlanks)):
+            print("Plank misplaced : push attempt coming")
+            misplacedPlank = findMisplaced(moves[i].start, currentPlanks)
+            c1 = misplacedPlank.center
+            move = Move([c1, Position(c1.x, c1.y, c1.z+2*Plank.THICKNESS),
                     moves[i].positions[2],
                     moves[i].positions[3]],
-                [Orientation(CATCH_o.x, CATCH_o.y, misplacedBrick.orientation.z),
-                    Orientation(CATCH_o.x, CATCH_o.y, misplacedBrick.orientation.z),
+                [Orientation(CATCH_o.x, CATCH_o.y, misplacedPlank.orientation.z),
+                    Orientation(CATCH_o.x, CATCH_o.y, misplacedPlank.orientation.z),
                     moves[i].orientations[2],
                     moves[i].orientations[3]])
-            moveBrick(move)
-         '''   #pushBrick(args, misplacedBrick, moves[i])
+            movePlank(move)
+         '''   #pushPlank(args, misplacedPlank, moves[i])
         print("Tasks completed !")
 
 if __name__ == '__main__':
