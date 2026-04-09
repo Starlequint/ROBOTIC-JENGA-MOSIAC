@@ -16,11 +16,11 @@ import sys
 import os
 import time
 import threading
-
+import utilities
 from kortex_api.autogen.client_stubs.BaseClientRpc import BaseClient
 from kortex_api.autogen.client_stubs.BaseCyclicClientRpc import BaseCyclicClient
-
 from kortex_api.autogen.messages import Base_pb2, BaseCyclic_pb2, Common_pb2
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 
 # Maximum allowed waiting time during actions (in seconds)
 TIMEOUT_DURATION = 20
@@ -147,37 +147,20 @@ def example_cartesian_action_movement(base, base_cyclic, x, y, z, ox, oy, oz):
     else:
         print("Timeout on action notification wait")
     return finished
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
-import utilities
-
-# Parse arguments
-#args = utilities.parseConnectionArguments()
 
 def mv(args, x, y, z, ox, oy, oz, home):
-    
-	# Import the utilities helper module
-		
 	# Create connection to the device and get the router
 	with utilities.DeviceConnection.createTcpConnection(args) as router:
-
 		# Create required services
 		base = BaseClient(router)
 		base_cyclic = BaseCyclicClient(router)
 
-		# Example core
 		success, l = True, 10 if home else 2
-        
 		if (home): success &= example_move_to_home_position(base)
-		
 		for i in range(l):
-			success &= example_cartesian_action_movement(base, base_cyclic, x/l, y/l, z/l, ox/l, oy/l, oz/l)
-		#success &= example_angular_action_movement(base)
+			success &= example_cartesian_action_movement(
+                    base, base_cyclic, x/l, y/l, z/l, ox/l, oy/l, oz/l)
 
 		# You can also refer to the 110-Waypoints examples if you want to execute
 		# a trajectory defined by a series of waypoints in joint space or in Cartesian space
-
 	return 0
-
-
-#main(0,0,0,90,0,0,True)
-#main(-0.28,-0.15,0.02,0,0,0,False)

@@ -80,11 +80,16 @@ def patternRecognition(detected_points):
 
     for i, j, k in combinations(range(len(detected)), 3):
         p1, p2, p3 = detected[i], detected[j], detected[k]
-        if is_plausible_triangle(p1, p2, p3): #Candidates now contains all triplets that form equilateral-ish triangles
-            print(f"Found plausible triangle with points {i}, {j}, {k} and aspect ratios {triangle_aspect(p1, p2, p3)}")
-            if is_valid_size(p1, p2, p3): #Sorts out triangles that are too small or too large to be the target
+        if is_plausible_triangle(p1, p2, p3): 
+            #Candidates now contains all triplets that form equilateral-ish triangles
+            print(f"Found plausible triangle with points {i}, {j}, {k}"+
+                  f" and aspect ratios {triangle_aspect(p1, p2, p3)}")
+            if is_valid_size(p1, p2, p3): 
+                #Sorts out triangles that are too small or too large to be the target
                 print(f"Triangle with points {i}, {j}, {k} has acceptable size.")
-                if sum([is_valid_rotation(p1, p2), is_valid_rotation(p1, p3), is_valid_rotation(p2, p3)]) == 2: #checks if blocs have correct roations to be equilateral.
+                if sum([is_valid_rotation(p1, p2), is_valid_rotation(p1, p3), 
+                        is_valid_rotation(p2, p3)]) == 2: 
+                    #checks if blocs have correct roations to be equilateral.
                     candidates.append((i, j, k))
 
     #Generate tesselation from matched triangle
@@ -100,9 +105,12 @@ def patternRecognition(detected_points):
             
         angle_1= base_triangle[0][2] 
             
-        offset1 = np.array([np.cos(np.deg2rad(angle_1)) * side_len, np.sin(np.deg2rad(angle_1)) * side_len, 0])
-        offset2 = np.array([np.cos(np.deg2rad(angle_1 + 60)) * side_len, np.sin(np.deg2rad(angle_1 + 60)) * side_len, 0])
-        offset3 = np.array([np.cos(np.deg2rad(angle_1 - 60)) * side_len, np.sin(np.deg2rad(angle_1 - 60)) * side_len, 0])
+        offset1 = np.array([np.cos(np.deg2rad(angle_1)) * side_len, 
+                            np.sin(np.deg2rad(angle_1)) * side_len, 0])
+        offset2 = np.array([np.cos(np.deg2rad(angle_1 + 60)) * side_len, 
+                            np.sin(np.deg2rad(angle_1 + 60)) * side_len, 0])
+        offset3 = np.array([np.cos(np.deg2rad(angle_1 - 60)) * side_len, 
+                            np.sin(np.deg2rad(angle_1 - 60)) * side_len, 0])
 
         final_triangles.append(base_triangle + offset1)
         final_triangles.append(base_triangle - offset1)
@@ -111,7 +119,8 @@ def patternRecognition(detected_points):
         final_triangles.append(base_triangle + offset3)
         final_triangles.append(base_triangle - offset3)
 
-        #TODO add x and y limits, Mazbe more appropriate in main seeing as we need to be in world coordinates
+        #TODO add x and y limits, Maybe more appropriate in main seeing 
+        # as we need to be in world coordinates
     \
     plot_triangles(detected, final_triangles) 
     return final_triangles # [(cx, cy, θ), ...]
