@@ -165,7 +165,7 @@ def mv(args, x, y, z, ox, oy, oz, home):
 		base_cyclic = BaseCyclicClient(router)
 
 		# Example core
-		success, l = True, 10 if home else 1
+		success, l = True, 10 if home else 2
         
 		if (home): success &= example_move_to_home_position(base)
 		
