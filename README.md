@@ -1,7 +1,7 @@
 # **Robotic Jenga Mosaic Project**
 
 Implementation of Gen 3 (kinova) motion to pick and place jenga planks to extend a given, pre-determined pattern.
-The **Robotic Jenga Mosaic** project involves using a robotic arm to interact with Jenga blocks and perform a variety of tasks such as detection, manipulation, and structural assembly. This project incorporates vision-based processing (with detection of Jenga blocks), kinematic motion (both forward and inverse), and robotic arm control (including gripper commands). It integrates Python scripts to enable smooth operations for robotic movement and block interaction.
+The **Robotic Jenga Mosaic** project involves using a robotic arm to interact with Jenga planks and perform a variety of tasks such as detection, manipulation, and structural assembly. This project incorporates vision-based processing (with detection of Jenga planks), kinematic motion (both forward and inverse), and robotic arm control (including gripper commands). It integrates Python scripts to enable smooth operations for robotic movement and plank interaction.
 
 ---
 
@@ -14,7 +14,7 @@ ROBOTIC-JENGA-MOSIAC/
 
 ├── instrutions.md # Instructions or guidelines related to the project.
 
-├── JENGA_detection_v5.py # Detects Jenga blocks and processes visual data.
+├── JENGA_detection_v5.py # Detects Jenga planks and processes visual data.
 
 ├── main.py # Main script that runs the core robot control and movement.
 
@@ -22,7 +22,7 @@ ROBOTIC-JENGA-MOSIAC/
 
 ├── robohub_codes.py # Example scripts for forward/inverse kinematics and gripper control.
 
-├── TriangleTessellation.py # Defines a tessellation method for structural planning with blocks.
+├── TriangleTessellation.py # Defines a tessellation method for structural planning with planks.
 
 └── utilities.py # Helper functions for device connection management (TCP/UDP).
 
@@ -34,7 +34,7 @@ ROBOTIC-JENGA-MOSIAC/
 1. **Prerequisites**:
    - **Python 3.x**: Ensure that Python 3.x is installed on your system.
    - **Kinova Robot and Kortex API**: You need access to a Kinova robotic arm that supports the Kortex API.
-   - **Camera/Computer Vision Tools**: You may also need a camera and image processing tools to perform block detection (e.g., OpenCV).
+   - **Camera/Computer Vision Tools**: You may also need a camera and image processing tools to perform plank detection (e.g., OpenCV).
 
 2. **Install Dependencies**:
    This project uses several Python libraries. Install them via `pip` as follows:
@@ -46,8 +46,14 @@ Connect your Kinova robotic arm to your network.
 Ensure the robot's API is accessible from your development machine (check the IP address and credentials).
 Make sure the robot's software is set up according to Kinova's documentation.
 Image Capture:
-If you plan to use block detection and vision-based feedback, ensure you have a working camera setup that integrates with OpenCV. The getImage.py file contains functions for capturing images.
+If you plan to use plank detection and vision-based feedback, ensure you have a working camera setup that integrates with OpenCV. The getImage.py file contains functions for capturing images.
 Usage
+0. Launch the project
+The main.py script contains the core of the project and calls to other modules.
+```bash
+./main.py
+```
+The following are interesting only if you care about using the modules individually.
 1. Move the Robot Arm
 
 The move_angular_and_cartesian.py script contains the core functions for controlling the robot arm.
@@ -106,7 +112,7 @@ gripper.speedMove(speed=-0.1)
 ```
 4. Image Capture for Jenga Detection
 
-The JENGA_detection_v5.py file includes vision-based processing to detect Jenga blocks in a scene. This file utilizes OpenCV to identify block positions and orientations.
+The JENGA_detection_v5.py file includes vision-based processing to detect Jenga planks in a scene. This file utilizes OpenCV to identify plank positions and orientations.
 
 Running Image Detection:
 ```python
@@ -152,18 +158,18 @@ args = parseConnectionArguments()
 with DeviceConnection.createUdpConnection(args) as router:
     # Interact with the robot at 1kHz
 ```
-Code Breakdown
+Module's code Breakdown
 1. getImage.py
 
-Captures images from the camera for processing. The images can be saved and passed to other scripts for Jenga block detection.
+Captures images from the camera for processing. The images can be saved and passed to other scripts for Jenga plank detection.
 
 2. JENGA_detection_v5.py
 
-Detects and processes the Jenga blocks from captured images. It processes visual input, identifies block positions, and computes useful data for robot interaction.
+Detects and processes the Jenga planks from captured images. It processes visual input, identifies plank positions, and computes useful data for robot interaction.
 
 3. TriangleTessellation.py
 
-Contains functions for tessellating triangular or polygonal shapes. This could be used for planning structural patterns or arranging Jenga blocks into a mosaic pattern.
+Contains functions for tessellating triangular or polygonal shapes. This could be used for planning structural patterns or arranging Jenga planks into a mosaic pattern.
 
 4. move_angular_and_cartesian.py
 
