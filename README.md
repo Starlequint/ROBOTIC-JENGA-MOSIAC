@@ -181,93 +181,93 @@ Functions calls diagram:
 
 ├── release()
 
- │ ├── initGripper(router)
+ │ &nbsp;&nbsp;&nbsp;&nbsp; ├── initGripper(router)
 
- │ └── gripper.open()
+ │ &nbsp;&nbsp;&nbsp;&nbsp; └── gripper.open()
 
  ├── plankDetection()
 
- │ ├── getImage()
+ │ &nbsp;&nbsp;&nbsp;&nbsp; ├── getImage()
 
- │ │ ├── move(CAMERA, CAMERA\_o, True)
+ │ &nbsp;&nbsp;&nbsp;&nbsp; │ &nbsp;&nbsp;&nbsp;&nbsp; ├── move(CAMERA, CAMERA\_o, True)
 
- │ │ │ ├── inBoundary(position)
+ │ &nbsp;&nbsp;&nbsp;&nbsp; │ &nbsp;&nbsp;&nbsp;&nbsp; │ &nbsp;&nbsp;&nbsp;&nbsp; ├── inBoundary(position)
 
- │ │ │ └── mv(args, x, y, z, ox, oy, oz)
+ │ &nbsp;&nbsp;&nbsp;&nbsp; │ &nbsp;&nbsp;&nbsp;&nbsp; │ &nbsp;&nbsp;&nbsp;&nbsp; └── mv(args, x, y, z, ox, oy, oz)
 
- │ │ │  &nbsp;&nbsp;  └── example\_cartesian\_action\_movement(base, base\_cyclic, x/l, y/l, z/l, ox/l, oy/l, oz/l)
+ │ &nbsp;&nbsp;&nbsp;&nbsp; │ &nbsp;&nbsp;&nbsp;&nbsp; │ &nbsp;&nbsp;&nbsp;&nbsp;  &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;  └── example\_cartesian\_action\_movement(base, base\_cyclic, x/l, y/l, z/l, ox/l, oy/l, oz/l)
 
- │ │ └── get\_single\_frame(rtsp\_url)
+ │ &nbsp;&nbsp;&nbsp;&nbsp; │ &nbsp;&nbsp;&nbsp;&nbsp; └── get\_single\_frame(rtsp\_url)
 
- │ ├── save(rawImage, rawImagePath)
+ │ &nbsp;&nbsp;&nbsp;&nbsp; ├── save(rawImage, rawImagePath)
 
- │ ├── save(colourImage, colourImagePath)
+ │ &nbsp;&nbsp;&nbsp;&nbsp; ├── save(colourImage, colourImagePath)
 
- │ └── detect\_planks(raw\_image\_path, color\_image\_path)
+ │ &nbsp;&nbsp;&nbsp;&nbsp; └── detect\_planks(raw\_image\_path, color\_image\_path)
 
- │  &nbsp;&nbsp;                 ├── detect\_canny(...)
+ │ &nbsp;&nbsp;&nbsp;&nbsp; &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; ├── detect\_canny(...)
 
- │              &nbsp;&nbsp;       ├── detect\_canny(...)
+ │ &nbsp;&nbsp;&nbsp;&nbsp; &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; ├── detect\_canny(...)
 
- │          &nbsp;&nbsp;           ├── detect\_sobel(...)
+ │ &nbsp;&nbsp;&nbsp;&nbsp; &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; ├── detect\_sobel(...)
 
- │  &nbsp;&nbsp;├── detect\_sobel(...)
+ │ &nbsp;&nbsp;&nbsp;&nbsp; &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; ├── detect\_sobel(...)
 
- │ &nbsp;&nbsp; ├── detect\_sobel(...)
+ │ &nbsp;&nbsp;&nbsp;&nbsp; &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; ├── detect\_sobel(...)
 
- │ &nbsp;&nbsp; ├── detect\_sobel(...)
+ │ &nbsp;&nbsp;&nbsp;&nbsp; &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; ├── detect\_sobel(...)
 
- │ &nbsp;&nbsp; ├── merge\_all(...)
+ │ &nbsp;&nbsp;&nbsp;&nbsp; &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; ├── merge\_all(...)
 
- │  &nbsp;&nbsp;└── \_dark\_pixel\_ratio(raw\_gray, c[8])
+ │ &nbsp;&nbsp;&nbsp;&nbsp; &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; └── \_dark\_pixel\_ratio(raw\_gray, c[8])
 
  ├── recognizePattern(rawData, bricks)
 
- │   └── patternRecognition(rawData)
+ │ &nbsp;&nbsp;&nbsp;&nbsp;   └── patternRecognition(rawData)
 
- │  &nbsp;&nbsp;    ├── is\_plausible\_triangle(p1, p2, p3)
+ │ &nbsp;&nbsp;&nbsp;&nbsp; &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;    ├── is\_plausible\_triangle(p1, p2, p3)
 
- │  &nbsp;&nbsp;   │ └── triangle\_aspect(p1, p2, p3)
+ │ &nbsp;&nbsp;&nbsp;&nbsp; &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;   │ &nbsp;&nbsp;&nbsp;&nbsp; └── triangle\_aspect(p1, p2, p3)
 
- │   &nbsp;&nbsp;   ├── is\_valid\_size(p1, p2, p3)
+ │ &nbsp;&nbsp;&nbsp;&nbsp; &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;   ├── is\_valid\_size(p1, p2, p3)
 
- │  &nbsp;&nbsp;   ├── is\_valid\_rotation(p1, p2)
+ │ &nbsp;&nbsp;&nbsp;&nbsp; &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;   ├── is\_valid\_rotation(p1, p2)
 
- │  &nbsp;&nbsp;  ├── is\_valid\_rotation(p1, p3)
+ │ &nbsp;&nbsp;&nbsp;&nbsp; &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;  ├── is\_valid\_rotation(p1, p3)
 
- │  &nbsp;&nbsp;   └── is\_valid\_rotation(p2, p3)
+ │ &nbsp;&nbsp;&nbsp;&nbsp; &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;   └── is\_valid\_rotation(p2, p3)
 
 Loop:
 
  ├── movePlank(moves[i])
 
- │ ├── move(...)
+ │ &nbsp;&nbsp;&nbsp;&nbsp; ├── move(...)
 
- │ │ └── ...
+ │ &nbsp;&nbsp;&nbsp;&nbsp; │ &nbsp;&nbsp;&nbsp;&nbsp; └── ...
 
- │ ├── catch()
+ │ &nbsp;&nbsp;&nbsp;&nbsp; ├── catch()
 
- │ │ ├── initGripper(router)
+ │ &nbsp;&nbsp;&nbsp;&nbsp; │ &nbsp;&nbsp;&nbsp;&nbsp; ├── initGripper(router)
 
- │ │ └── gripper.close(1 - Brick.WIDTH / GRIPPER\_WIDTH)
+ │ &nbsp;&nbsp;&nbsp;&nbsp; │ &nbsp;&nbsp;&nbsp;&nbsp; └── gripper.close(1 - Brick.WIDTH / GRIPPER\_WIDTH)
 
- │ ├── move(...)
+ │ &nbsp;&nbsp;&nbsp;&nbsp; ├── move(...)
 
- │ │ └── ...
+ │ &nbsp;&nbsp;&nbsp;&nbsp; │ &nbsp;&nbsp;&nbsp;&nbsp; └── ...
 
- │ ├── release()
+ │ &nbsp;&nbsp;&nbsp;&nbsp; ├── release()
 
- │ │ └── ...
+ │ &nbsp;&nbsp;&nbsp;&nbsp; │ &nbsp;&nbsp;&nbsp;&nbsp; └── ...
 
- │ └── move(...)
+ │ &nbsp;&nbsp;&nbsp;&nbsp; └── move(...)
 
- │  &nbsp;&nbsp;     └── ...
+ │ &nbsp;&nbsp;&nbsp;&nbsp;  &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;     └── ...
 
  // the following calls correspond to the disabled feedback
 
  ├── plankDetection()
 
- │ └── ...
+ │ &nbsp;&nbsp;&nbsp;&nbsp; └── ...
 
  ├── plankPlaced(moves[i].start, currentPlanks)
 
@@ -275,7 +275,7 @@ Loop:
 
  └── movePlank(move)
 
- &nbsp;&nbsp;      └── ...
+ &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;      └── ...
 
 In overview, the main function of the code follows this flow:
  
@@ -292,7 +292,7 @@ Captures images from the camera for processing. The images can be saved and pass
 
 2. JENGA_detection_v5.py
 
-Detects and processes the Jenga planks from captured images. It processes visual input, identifies plank positions, and computes useful data for robot interaction.
+Detects and processes the Jenga planks from captured images. It processes visual input, identifies plank positions.
 
 3. TriangleTessellation.py
 
@@ -334,5 +334,5 @@ This project was inspired by real-world applications in robotics and automation.
 
 ### Reference
 
-User guide: https://www.kinovarobotics.com/product/gen3-robots#Product__resources
+[Kinova User Guide](https://www.kinovarobotics.com/product/gen3-robots#Product__resources)
 Note: we are using the 7 DOF one.
