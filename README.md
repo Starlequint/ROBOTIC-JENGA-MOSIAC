@@ -33,6 +33,9 @@ ROBOTIC-JENGA-MOSIAC/
 
 1. **Prerequisites**:
    - **Python 3.x**: Ensure that Python 3.x is installed on your system.
+   ```bash
+   python --version
+   ```
    - **Kinova Robot and Kortex API**: You need access to a Kinova robotic arm that supports the Kortex API.
    - **Camera/Computer Vision Tools**: You may also need a camera and image processing tools to perform plank detection (e.g., OpenCV).
 
@@ -41,17 +44,25 @@ ROBOTIC-JENGA-MOSIAC/
    
    ```bash
    pip install kortex-api opencv-python matplotlib numpy argparse pillow
-Set up the Robot:
+3. **Set up the Robot**:
 Connect your Kinova robotic arm to your network.
 Ensure the robot's API is accessible from your development machine (check the IP address and credentials).
 Make sure the robot's software is set up according to Kinova's documentation.
-Image Capture:
+4. **Image Capture**:
 If you plan to use plank detection and vision-based feedback, ensure you have a working camera setup that integrates with OpenCV. The getImage.py file contains functions for capturing images.
-Usage
+Example for setting up RTSP:
+```python
+rtsp_url = "rtsp://<username>:<password>@<camera_ip>/color"
+frame_array = get_single_frame(rtsp_url)
+```
+
+## **Usage**
+
 0. Launch the project
+
 The main.py script contains the core of the project and calls to other modules.
 ```bash
-./main.py
+python main.py
 ```
 The following are interesting only if you care about using the modules individually.
 1. Move the Robot Arm
@@ -158,14 +169,130 @@ args = parseConnectionArguments()
 with DeviceConnection.createUdpConnection(args) as router:
     # Interact with the robot at 1kHz
 ```
-Module's code Breakdown
+### **Main's code Breakdown**
+All tasks are implemented in Python, with several classes modeling the objects being dealt with: Position, Orientation, Move, and Plank. Position and Orientation have three attributes, as the robot operates in 3D space, although the orientations along the X and Y axes remain constant. The Plank class has attributes for position, orientation, and classifiers for its dimensions. The Move class, which describes the motion of the robot, includes attributes for the starting and ending positions and orientations. Additionally, Move contains a list of intermediate steps (currently four positions and orientations) to simplify movement handling.
+
+<div align="center">
+  <img src="illustrations/uml.png" alt="UML">
+</div>
+
+Functions calls diagram:
+ Main Function
+
+├── release()
+
+ │ &nbsp;&nbsp;&nbsp;&nbsp; ├── initGripper(router)
+
+ │ &nbsp;&nbsp;&nbsp;&nbsp; └── gripper.open()
+
+ ├── plankDetection()
+
+ │ &nbsp;&nbsp;&nbsp;&nbsp; ├── getImage()
+
+ │ &nbsp;&nbsp;&nbsp;&nbsp; │ &nbsp;&nbsp;&nbsp;&nbsp; ├── move(CAMERA, CAMERA\_o, True)
+
+ │ &nbsp;&nbsp;&nbsp;&nbsp; │ &nbsp;&nbsp;&nbsp;&nbsp; │ &nbsp;&nbsp;&nbsp;&nbsp; ├── inBoundary(position)
+
+ │ &nbsp;&nbsp;&nbsp;&nbsp; │ &nbsp;&nbsp;&nbsp;&nbsp; │ &nbsp;&nbsp;&nbsp;&nbsp; └── mv(args, x, y, z, ox, oy, oz)
+
+ │ &nbsp;&nbsp;&nbsp;&nbsp; │ &nbsp;&nbsp;&nbsp;&nbsp; │ &nbsp;&nbsp;&nbsp;&nbsp;  &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;  └── example\_cartesian\_action\_movement(base, base\_cyclic, x/l, y/l, z/l, ox/l, oy/l, oz/l)
+
+ │ &nbsp;&nbsp;&nbsp;&nbsp; │ &nbsp;&nbsp;&nbsp;&nbsp; └── get\_single\_frame(rtsp\_url)
+
+ │ &nbsp;&nbsp;&nbsp;&nbsp; ├── save(rawImage, rawImagePath)
+
+ │ &nbsp;&nbsp;&nbsp;&nbsp; ├── save(colourImage, colourImagePath)
+
+ │ &nbsp;&nbsp;&nbsp;&nbsp; └── detect\_planks(raw\_image\_path, color\_image\_path)
+
+ │ &nbsp;&nbsp;&nbsp;&nbsp; &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; ├── detect\_canny(...)
+
+ │ &nbsp;&nbsp;&nbsp;&nbsp; &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; ├── detect\_canny(...)
+
+ │ &nbsp;&nbsp;&nbsp;&nbsp; &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; ├── detect\_sobel(...)
+
+ │ &nbsp;&nbsp;&nbsp;&nbsp; &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; ├── detect\_sobel(...)
+
+ │ &nbsp;&nbsp;&nbsp;&nbsp; &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; ├── detect\_sobel(...)
+
+ │ &nbsp;&nbsp;&nbsp;&nbsp; &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; ├── detect\_sobel(...)
+
+ │ &nbsp;&nbsp;&nbsp;&nbsp; &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; ├── merge\_all(...)
+
+ │ &nbsp;&nbsp;&nbsp;&nbsp; &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; └── \_dark\_pixel\_ratio(raw\_gray, c[8])
+
+ ├── recognizePattern(rawData, bricks)
+
+ │ &nbsp;&nbsp;&nbsp;&nbsp;   └── patternRecognition(rawData)
+
+ │ &nbsp;&nbsp;&nbsp;&nbsp; &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;    ├── is\_plausible\_triangle(p1, p2, p3)
+
+ │ &nbsp;&nbsp;&nbsp;&nbsp; &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;   │ &nbsp;&nbsp;&nbsp;&nbsp; └── triangle\_aspect(p1, p2, p3)
+
+ │ &nbsp;&nbsp;&nbsp;&nbsp; &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;   ├── is\_valid\_size(p1, p2, p3)
+
+ │ &nbsp;&nbsp;&nbsp;&nbsp; &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;   ├── is\_valid\_rotation(p1, p2)
+
+ │ &nbsp;&nbsp;&nbsp;&nbsp; &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;  ├── is\_valid\_rotation(p1, p3)
+
+ │ &nbsp;&nbsp;&nbsp;&nbsp; &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;   └── is\_valid\_rotation(p2, p3)
+
+Loop:
+
+ ├── movePlank(moves[i])
+
+ │ &nbsp;&nbsp;&nbsp;&nbsp; ├── move(...)
+
+ │ &nbsp;&nbsp;&nbsp;&nbsp; │ &nbsp;&nbsp;&nbsp;&nbsp; └── ...
+
+ │ &nbsp;&nbsp;&nbsp;&nbsp; ├── catch()
+
+ │ &nbsp;&nbsp;&nbsp;&nbsp; │ &nbsp;&nbsp;&nbsp;&nbsp; ├── initGripper(router)
+
+ │ &nbsp;&nbsp;&nbsp;&nbsp; │ &nbsp;&nbsp;&nbsp;&nbsp; └── gripper.close(1 - Brick.WIDTH / GRIPPER\_WIDTH)
+
+ │ &nbsp;&nbsp;&nbsp;&nbsp; ├── move(...)
+
+ │ &nbsp;&nbsp;&nbsp;&nbsp; │ &nbsp;&nbsp;&nbsp;&nbsp; └── ...
+
+ │ &nbsp;&nbsp;&nbsp;&nbsp; ├── release()
+
+ │ &nbsp;&nbsp;&nbsp;&nbsp; │ &nbsp;&nbsp;&nbsp;&nbsp; └── ...
+
+ │ &nbsp;&nbsp;&nbsp;&nbsp; └── move(...)
+
+ │ &nbsp;&nbsp;&nbsp;&nbsp;  &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;     └── ...
+
+ // the following calls correspond to the disabled feedback
+
+ ├── plankDetection()
+
+ │ &nbsp;&nbsp;&nbsp;&nbsp; └── ...
+
+ ├── plankPlaced(moves[i].start, currentPlanks)
+
+ ├── findMisplaced(moves[i].start, currentPlanks)
+
+ └── movePlank(move)
+
+ &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;      └── ...
+
+In overview, the main function of the code follows this flow:
+ 
+ 1. Retrieve the planks. 
+
+ 2. Identify the patterns and determine the necessary moves. 
+    
+ 3. Loop through these moves to position all the planks.
+
+### **Module's code Breakdown**
 1. getImage.py
 
 Captures images from the camera for processing. The images can be saved and passed to other scripts for Jenga plank detection.
 
 2. JENGA_detection_v5.py
 
-Detects and processes the Jenga planks from captured images. It processes visual input, identifies plank positions, and computes useful data for robot interaction.
+Detects and processes the Jenga planks from captured images. It processes visual input, identifies plank positions.
 
 3. TriangleTessellation.py
 
@@ -207,5 +334,5 @@ This project was inspired by real-world applications in robotics and automation.
 
 ### Reference
 
-User guide: https://www.kinovarobotics.com/product/gen3-robots#Product__resources
+[Kinova User Guide](https://www.kinovarobotics.com/product/gen3-robots#Product__resources)
 Note: we are using the 7 DOF one.
