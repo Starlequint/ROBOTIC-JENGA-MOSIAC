@@ -62,7 +62,7 @@ frame_array = get_single_frame(rtsp_url)
 
 The main.py script contains the core of the project and calls to other modules.
 ```bash
-./main.py
+python main.py
 ```
 The following are interesting only if you care about using the modules individually.
 1. Move the Robot Arm
